@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import { iconPNG } from './icon.mjs';
 const icon = iconPNG();
+const { version } = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 function binary(file, data) {
   if (check) { if (!fs.readFileSync(file).equals(data)) throw new Error(`Stale: ${file}`); }
   else { fs.mkdirSync(file.slice(0, file.lastIndexOf('/')), { recursive: true }); fs.writeFileSync(file, data); }
@@ -17,7 +18,7 @@ function emit(file, value) {
 }
 for (const host of ['codex', 'claude']) {
   const root = `plugins/${host}/hooks`;
-  const manifest = { name: 'hooks', version: '0.2.4', description: 'Quiet time, context, token, and execution awareness.', author: { name: 'kurnarios' }, license: 'MIT' };
+  const manifest = { name: 'hooks', version, description: 'Quiet time, context, token, and execution awareness.', author: { name: 'kurnarios' }, license: 'MIT' };
   if (host === 'claude') manifest.icon = './assets/icon.png';
   else manifest.interface = { displayName: 'Awareness hooks', shortDescription: manifest.description, brandColor: '#2DD4BF', composerIcon: './assets/icon.png', logo: './assets/icon.png' };
   binary(`${root}/assets/icon.png`, icon);
@@ -36,5 +37,5 @@ emit('.agents/plugins/marketplace.json', {
   name: 'awareness', interface: { displayName: 'Awareness' }, plugins: [{ name: 'hooks', source: { source: 'local', path: './plugins/codex/hooks' }, policy: { installation: 'AVAILABLE', authentication: 'ON_INSTALL' }, category: 'Productivity' }],
 });
 emit('.claude-plugin/marketplace.json', {
-  name: 'awareness', owner: { name: 'kurnarios' }, metadata: { description: 'Minimal time, token, and execution awareness hooks.' }, plugins: [{ name: 'hooks', source: './plugins/claude/hooks', description: 'Quiet time, token, and execution awareness.', version: '0.2.4' }],
+  name: 'awareness', owner: { name: 'kurnarios' }, metadata: { description: 'Minimal time, token, and execution awareness hooks.' }, plugins: [{ name: 'hooks', source: './plugins/claude/hooks', description: 'Quiet time, token, and execution awareness.', version }],
 });
