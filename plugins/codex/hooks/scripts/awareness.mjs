@@ -6,7 +6,66 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 
-const INTERVAL = 600_000;
+export const defaults = {
+  prefix: 'Beware',
+  intervalMs: 600000,
+  contextChangePoints: 10,
+  toolReportMs: 5000,
+  thresholds: {
+    context: [50, 65, 85],
+    toolMs: [300000, 900000, 1800000],
+    input: [5000000, 10000000, 25000000],
+    cached: [20000000, 40000000, 100000000],
+    contextJumpPoints: 20,
+    inputJump: 500000,
+  },
+  messages: {
+    context: [
+      'Keep context usage low; reduce inputs/outputs, reads, searches, and tool calls.',
+      'Persist handoffs on results; organize work to minimize inputs/outputs, reads, searches, and tool calls.',
+      'Persist a handoff on every change. Context will soon be compacted; knowledge will be lost unless persisted and reloaded.',
+    ],
+    tool: [
+      'Slow tool: if unexpected, take time to understand and improve it.',
+      'Very slow tool: if unexpected, fix it. Do not just split calls; eliminate repeated useless work and optimize.',
+      'Extremely slow tool: unless expected, something went wrong; investigate and fix it.',
+    ],
+    input: [
+      'Too verbose: reduce reading and tool calls.',
+      'Excessive input tokens: organize work to reduce reading and tool calls.',
+      'Critical input token usage: persist results and eliminate unnecessary reading and tool calls.',
+    ],
+    cached: [
+      'Too many turns: combine related work and avoid overly granular calls.',
+      'Excessive cached tokens: combine work into fewer turns.',
+      'Critical cached token usage: reduce turns and consolidate granular work.',
+    ],
+    contextJump: 'A single step consumed too much context; learn from it and avoid repeating it.',
+    inputJump: 'A single step consumed too many input tokens; reduce inputs and avoid repeating it.',
+    postCompaction: 'Re-read still-needed files, goals, plans, protocols, specs, etc. whose original content was compacted/summarized.',
+  },
+};
+function mergeConfig(base, override) {
+  const result = { ...base };
+  for (const [key, value] of Object.entries(base)) {
+    const candidate = override?.[key];
+    if (Array.isArray(value)) {
+      if (Array.isArray(candidate) && candidate.length === value.length && candidate.every((v, i) =>
+        typeof value[i] === 'number' ? number(v) !== undefined : typeof v === 'string') &&
+        (typeof value[0] !== 'number' || candidate.every((v, i) => !i || v >= candidate[i - 1]))) result[key] = candidate;
+    } else if (value && typeof value === 'object') result[key] = mergeConfig(value, candidate);
+    else if (typeof value === 'number' ? number(candidate) !== undefined && candidate > 0 : typeof candidate === typeof value) result[key] = candidate;
+  }
+  return result;
+}
+export function loadConfig(env = process.env) {
+  return mergeConfig(defaults, boundedJSON(env.AWARENESS_CONFIG_FILE || path.join(os.homedir(), '.config', 'awareness', 'config.json'), 65536));
+}
+const levels = ['warning', 'error', 'critical'];
+function severity(value, thresholds) {
+  if (number(value) === undefined) return -1;
+  return thresholds.reduce((level, threshold, i) => value >= threshold ? i : level, -1);
+}
 const TAIL = 1024 * 1024;
 const hash = value => crypto.createHash('sha256').update(value).digest('hex').slice(0, 32);
 const number = value => Number.isFinite(value) && value >= 0 ? value : undefined;
@@ -188,6 +247,7 @@ export function nativeCost(p, host, records) {
 export function handle(p, { host = 'codex', env = process.env, now = Date.now() } = {}) {
   if (!p || typeof p.session_id !== 'string' || !p.session_id || typeof p.hook_event_name !== 'string') return;
   const event = p.hook_event_name;
+  const config = loadConfig(env);
   if (!['SessionStart', 'PostToolUse', 'PostToolUseFailure', 'PostCompact'].includes(event)) return;
   const transcript = transcriptFor(p, host);
   const identity = host === 'claude' ? p.agent_id || 'main' : p.agent_id || transcript || 'main';
@@ -201,7 +261,7 @@ export function handle(p, { host = 'codex', env = process.env, now = Date.now() 
   }
   if (event === 'SessionStart' && p.source === 'compact') {
     return { hookSpecificOutput: { hookEventName: event, additionalContext:
-      `Be aware: compacted=${new Date(now).toISOString().replace(/\.\d{3}Z$/, 'Z')}\nRe-read still-needed files, goals, plans, protocols, specs, etc. whose original content was compacted/summarized.` } };
+      `${config.prefix}: compacted=${new Date(now).toISOString().replace(/\.\d{3}Z$/, 'Z')}\n${config.messages.postCompaction}` } };
   }
   const stateFile = path.join(dir, 'snapshot.json');
   const parts = [];
@@ -209,13 +269,15 @@ export function handle(p, { host = 'codex', env = process.env, now = Date.now() 
   const getRecords = () => records ??= tailRecords(transcript);
   if (event === 'PostToolUse' || event === 'PostToolUseFailure') {
     const duration = toolDuration(p, number(p.duration_ms) === undefined ? getRecords() : [], now);
-    if (duration > 5000 && typeof p.tool_use_id === 'string') {
+    if (duration > config.toolReportMs && typeof p.tool_use_id === 'string') {
       const marker = path.join(dir, `tool-${hash(p.tool_use_id)}.done`);
       try {
         const fd = fs.openSync(marker, 'wx', 0o600);
         fs.closeSync(fd);
         const name = String(p.tool_name || 'tool').replace(/[^\w.:-]/g, '_').slice(0, 64);
         parts.push(`tool=${name} elapsed=${elapsed(duration)}`);
+        const level = severity(duration, config.thresholds.toolMs);
+        if (level >= 0) parts.push(`${levels[level]}: ${config.messages.tool[level]}`);
       } catch {}
     }
   }
@@ -228,32 +290,49 @@ export function handle(p, { host = 'codex', env = process.env, now = Date.now() 
     locked = true;
     const state = readJSON(stateFile);
     const u = usage(p, host, env, getRecords());
-    const percent = number(u.used) !== undefined && u.capacity > 0 ? Math.floor(u.used * 100 / u.capacity) : undefined;
+    const percent = number(u.used) !== undefined && u.capacity > 0 ? u.used * 100 / u.capacity : undefined;
     const cost = nativeCost(p, host, getRecords());
     const firstCost = cost !== undefined && number(state.cost) === undefined;
     const hasUsage = number(u.input) !== undefined && number(u.output) !== undefined && number(u.cached) !== undefined;
     const firstUsage = hasUsage && !state.hasUsage;
-    const changed = percent !== undefined && (number(state.percent) === undefined || Math.abs(percent - state.percent) >= 10);
-    if (!Number.isFinite(state.at) || now - state.at >= INTERVAL || firstUsage || firstCost || changed) {
+    const changed = percent !== undefined && (number(state.percent) === undefined || Math.abs(percent - state.percent) >= config.contextChangePoints);
+    const alerts = [];
+    const currentLevels = {};
+    for (const [key, value] of [['context', percent], ['input', u.input], ['cached', u.cached]]) {
+      const level = severity(value, config.thresholds[key]);
+      currentLevels[key] = number(value) === undefined ? state.levels?.[key] ?? -1 : level;
+      if (level >= 0) alerts.push(`${levels[level]}: ${key}: ${config.messages[key][level]}`);
+    }
+    const crossed = Object.entries(currentLevels).some(([key, level]) => level >= 0 && level > (state.levels?.[key] ?? -1));
+    const jumps = [];
+    if (percent !== undefined && number(state.observedPercent) !== undefined && percent - state.observedPercent >= config.thresholds.contextJumpPoints) {
+      jumps.push(`critical: context_jump=${formatTokens(percent - state.observedPercent)}pp: ${config.messages.contextJump}`);
+    }
+    if (number(u.input) !== undefined && number(state.observedInput) !== undefined && u.input - state.observedInput >= config.thresholds.inputJump) {
+      jumps.push(`critical: input_jump=${formatTokens(u.input - state.observedInput)}: ${config.messages.inputJump}`);
+    }
+    const next = { ...state, observedPercent: percent ?? state.observedPercent, observedInput: u.input ?? state.observedInput, levels: currentLevels };
+    if (!Number.isFinite(state.at) || now - state.at >= config.intervalMs || firstUsage || firstCost || changed || crossed || jumps.length) {
       const fields = [new Date(now).toISOString().replace(/\.\d{3}Z$/, 'Z')];
       if (percent !== undefined) fields.push(`used_context=${Math.floor(percent)}%`);
       for (const [key, value] of [['in', u.input], ['out', u.output], ['cached', u.cached]]) {
         if (number(value) !== undefined) fields.push(`${key}=${formatTokens(value)}`);
       }
-      parts.push(fields.join(' '));
-      writeJSON(stateFile, { at: now, hasUsage: state.hasUsage || hasUsage, percent: percent ?? state.percent, cost: cost ?? state.cost });
+      parts.push(fields.join(' '), ...alerts, ...jumps);
+      Object.assign(next, { at: now, hasUsage: state.hasUsage || hasUsage, percent: percent ?? state.percent, cost: cost ?? state.cost });
       for (const file of fs.readdirSync(dir).slice(0, 2048)) {
         if (!file.startsWith('tool-')) continue;
         try { if (now - fs.statSync(path.join(dir, file)).mtimeMs > 86400_000) fs.unlinkSync(path.join(dir, file)); } catch {}
       }
     }
+    writeJSON(stateFile, next);
   } catch {} finally { if (locked) try { fs.unlinkSync(lock); } catch {} }
   if (parts.length) {
     const turn = event === 'SessionStart' ? undefined : turnElapsed(p, host, getRecords(), now);
     if (turn !== undefined) parts.push(`turn=${elapsed(turn)}`);
     const cost = nativeCost(p, host, getRecords());
     if (cost !== undefined) parts.push(`cost_usd=${cost}`);
-    return { hookSpecificOutput: { hookEventName: event, additionalContext: `Be aware: ${parts.join('\n')}` } };
+    return { hookSpecificOutput: { hookEventName: event, additionalContext: `${config.prefix}: ${parts.join('\n')}` } };
   }
 }
 

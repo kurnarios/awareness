@@ -19,7 +19,7 @@ function fixture(t, host = 'claude') {
 const context = output => output?.hookSpecificOutput.additionalContext;
 test('snapshot only once per ten minutes, including resume and clock rollback', t => {
   const { run } = fixture(t);
-  assert.match(context(run()), /^Be aware: \d{4}-.*Z$/);
+  assert.match(context(run()), /^Beware: \d{4}-.*Z$/);
   assert.equal(run(), undefined);
   assert.equal(run({}, -1000), undefined);
   assert.equal(run({}, 599999), undefined);
@@ -43,7 +43,7 @@ test('transcript starts work without completion records and match parallel tools
     { timestamp: new Date(now + 1000).toISOString(), payload: { type: 'function_call', call_id: 'b' } },
   ].map(JSON.stringify).join('\n'));
   assert.match(context(run({ hook_event_name: 'PostToolUse', tool_use_id: 'a', tool_name: 'Bash' }, 6100)), /elapsed=00:00:06/);
-  assert.equal(run({ hook_event_name: 'PostToolUse', tool_use_id: 'b' }, 6100)?.hookSpecificOutput.additionalContext, 'Be aware: tool=tool elapsed=00:00:05');
+  assert.equal(run({ hook_event_name: 'PostToolUse', tool_use_id: 'b' }, 6100)?.hookSpecificOutput.additionalContext, 'Beware: tool=tool elapsed=00:00:05');
   assert.equal(run({ hook_event_name: 'PostToolUse', tool_use_id: 'a' }, 8000), undefined);
   assert.equal(run({ hook_event_name: 'PostToolUse', tool_use_id: 'unknown' }, 8000), undefined);
 });
@@ -134,7 +134,7 @@ test('turn elapsed uses current Codex turn and excludes tool-result user message
   fs.writeFileSync(p.transcript_path, JSON.stringify({ type: 'user', timestamp: new Date(now).toISOString(), message: { content: 'prompt' } }) + '\n');
   assert.doesNotMatch(context(run()), /turn=/);
   const report = context(run({ hook_event_name: 'PostToolUse', tool_use_id: 'slow', tool_name: 'Bash', duration_ms: 6000 }, 6500));
-  assert.equal(report, 'Be aware: tool=Bash elapsed=00:00:06\nturn=00:00:06');
+  assert.equal(report, 'Beware: tool=Bash elapsed=00:00:06\nturn=00:00:06');
 });
 test('Claude can look up a tool start when native duration and completion records are absent', () => {
   const records = [{ type: 'assistant', timestamp: new Date(1000).toISOString(), message: { content: [{ type: 'tool_use', id: 'child-tool' }] } }];
@@ -196,7 +196,7 @@ test('compaction notice bypasses statistics throttling and adds no control decis
     const result = run({ hook_event_name: 'SessionStart', source: 'compact' }, 1001);
     assert.deepEqual(Object.keys(result), ['hookSpecificOutput']);
     assert.equal(result.hookSpecificOutput.hookEventName, 'SessionStart');
-    assert.match(context(result), /^Be aware: compacted=\d{4}-.*Z\nRe-read still-needed files, goals, plans, protocols, specs, etc\. whose original content was compacted\/summarized\.$/);
+    assert.match(context(result), /^Beware: compacted=\d{4}-.*Z\nRe-read still-needed files, goals, plans, protocols, specs, etc\. whose original content was compacted\/summarized\.$/);
     assert.ok(context(result).includes(new Date(now + 1001).toISOString().replace(/\.\d{3}Z$/, 'Z')));
     assert.equal(run({}, 1002), undefined);
   }
@@ -241,8 +241,8 @@ test('Codex uses native thread totals for in/out/cached while context stays requ
 test('each message has exactly one awareness prefix, including multiline reports', t => {
   const { run } = fixture(t);
   for (const output of [run(), run({ hook_event_name: 'PostToolUse', tool_use_id: 'slow-prefix', duration_ms: 6100 }), run({ hook_event_name: 'SessionStart', source: 'compact' })]) {
-    assert.ok(context(output).startsWith('Be aware: '));
-    assert.equal(context(output).match(/Be aware:/g)?.length, 1);
+    assert.ok(context(output).startsWith('Beware: '));
+    assert.equal(context(output).match(/Beware:/g)?.length, 1);
   }
 });
 test('live-shaped Codex children isolate usage, threshold changes, tool IDs, and schedules', t => {
@@ -293,4 +293,47 @@ test('Claude children read their own derived or explicit transcript, usage, and 
   fs.writeFileSync(explicit, records(40000, 30, 30000, 0.25));
   assert.match(context(run({ ...child, agent_id: 'child-b', agent_transcript_path: explicit })), /used_context=20% in=40K out=30 cached=30K/);
   assert.equal(run(child), undefined);
+});
+
+test('severity boundaries, immediate crossings, and single-step jumps use native observations', t => {
+  const { run, p } = fixture(t, 'codex');
+  const set = (percent, input = 0, cached = 0) => fs.writeFileSync(p.transcript_path, JSON.stringify({ payload: { type: 'token_count', info: {
+    model_context_window: 100000, last_token_usage: { total_tokens: percent * 1000 },
+    total_token_usage: { input_tokens: input, output_tokens: 0, cached_input_tokens: cached },
+  } } }));
+  set(49); run();
+  set(50); assert.match(context(run()), /warning: context:/);
+  assert.equal(run(), undefined);
+  set(65); assert.match(context(run()), /error: context:/);
+  set(85); assert.match(context(run()), /critical: context_jump=20pp/);
+  assert.equal(run(), undefined);
+  set(86, 499999); assert.equal(run(), undefined);
+  set(86, 999999); assert.match(context(run()), /critical: input_jump=500K/);
+  for (const [input, cached, level] of [[5000000, 20000000, 'warning'], [10000000, 40000000, 'error'], [25000000, 100000000, 'critical']]) {
+    set(86, input, cached);
+    const out = context(run());
+    assert.match(out, new RegExp(`${level}: input:`));
+    assert.match(out, new RegExp(`${level}: cached:`));
+  }
+});
+test('slow tool severity is inclusive at five, fifteen, and thirty minutes', t => {
+  const { run } = fixture(t); run();
+  for (const [ms, level] of [[299999, undefined], [300000, 'warning'], [900000, 'error'], [1800000, 'critical']]) {
+    const out = context(run({ hook_event_name: 'PostToolUse', tool_use_id: String(ms), duration_ms: ms }));
+    if (level) assert.match(out, new RegExp(`${level}:`));
+    else assert.doesNotMatch(out, /warning:|error:|critical:/);
+  }
+});
+test('profile configuration merges partial settings and rejects malformed thresholds', t => {
+  const { run, env, dir } = fixture(t);
+  env.AWARENESS_CONFIG_FILE = path.join(dir, 'config.json');
+  fs.writeFileSync(env.AWARENESS_CONFIG_FILE, JSON.stringify({ prefix: 'Notice', intervalMs: 1000,
+    thresholds: { toolMs: [6000, 7000, 8000], context: [80, 50, 10] },
+    messages: { tool: ['slow custom', 'error custom', 'critical custom'], postCompaction: 'Reload saved handoff.' } }));
+  assert.match(context(run()), /^Notice:/);
+  assert.ok(run({}, 1000));
+  assert.match(context(run({ hook_event_name: 'PostToolUse', tool_use_id: 'custom', duration_ms: 8000 })), /critical: critical custom/);
+  assert.match(context(run({ source: 'compact' })), /Reload saved handoff\./);
+  fs.writeFileSync(env.AWARENESS_CONFIG_FILE, '{bad');
+  assert.match(context(run({ source: 'compact' })), /^Beware:/);
 });

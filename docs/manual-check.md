@@ -30,7 +30,7 @@ Give the assistant a small useful task, such as reviewing a file. Then ask:
 
 Record its answer verbatim. Do not invoke `awareness.mjs`, reset state, or echo a sample report into the conversation. Normal development tools may cause the installed hook to run; that is expected.
 
-The current prefix is `Be aware: ` once per message. Unavailable fields should be absent. A fast call may produce no report at all.
+The current prefix is `Beware: ` once per message. Unavailable fields should be absent. A fast call may produce no report at all.
 
 ## 3. Start three independent subagents
 
@@ -74,7 +74,7 @@ Expected observations:
 - A due snapshot arrives through a subsequent normal eligible event.
 - One child's report does not reset another child's reporting deadline.
 - `turn` describes the current turn; it should not include the ten-minute idle gap.
-- A new report below the time threshold needs another legitimate trigger, such as a ten-percentage-point context change or newly available data.
+- A new report below the time threshold needs another legitimate trigger, such as a ten-percentage-point context change, a severity crossing, a critical single-step increase, or newly available data.
 
 ## 6. Audit the numbers and timing critically
 

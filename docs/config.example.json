@@ -1,0 +1,55 @@
+{
+  "prefix": "Beware",
+  "intervalMs": 600000,
+  "contextChangePoints": 10,
+  "toolReportMs": 5000,
+  "thresholds": {
+    "context": [
+      50,
+      65,
+      85
+    ],
+    "toolMs": [
+      300000,
+      900000,
+      1800000
+    ],
+    "input": [
+      5000000,
+      10000000,
+      25000000
+    ],
+    "cached": [
+      20000000,
+      40000000,
+      100000000
+    ],
+    "contextJumpPoints": 20,
+    "inputJump": 500000
+  },
+  "messages": {
+    "context": [
+      "Keep context usage low; reduce inputs/outputs, reads, searches, and tool calls.",
+      "Persist handoffs on results; organize work to minimize inputs/outputs, reads, searches, and tool calls.",
+      "Persist a handoff on every change. Context will soon be compacted; knowledge will be lost unless persisted and reloaded."
+    ],
+    "tool": [
+      "Slow tool: if unexpected, take time to understand and improve it.",
+      "Very slow tool: if unexpected, fix it. Do not just split calls; eliminate repeated useless work and optimize.",
+      "Extremely slow tool: unless expected, something went wrong; investigate and fix it."
+    ],
+    "input": [
+      "Too verbose: reduce reading and tool calls.",
+      "Excessive input tokens: organize work to reduce reading and tool calls.",
+      "Critical input token usage: persist results and eliminate unnecessary reading and tool calls."
+    ],
+    "cached": [
+      "Too many turns: combine related work and avoid overly granular calls.",
+      "Excessive cached tokens: combine work into fewer turns.",
+      "Critical cached token usage: reduce turns and consolidate granular work."
+    ],
+    "contextJump": "A single step consumed too much context; learn from it and avoid repeating it.",
+    "inputJump": "A single step consumed too many input tokens; reduce inputs and avoid repeating it.",
+    "postCompaction": "Re-read still-needed files, goals, plans, protocols, specs, etc. whose original content was compacted/summarized."
+  }
+}

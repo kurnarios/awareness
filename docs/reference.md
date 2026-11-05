@@ -1,6 +1,6 @@
 # Behavior and implementation reference
 
-Reports appear on the first eligible event, then every ten minutes during activity, or when context usage increases or decreases by **10 percentage points from the last reported percentage**. A report at 35% is followed by another at 45% or 25%. Smaller changes do not accumulate separate messages. These thresholds are per agent. No timer wakes an idle model.
+Reports appear on the first eligible event, then every ten minutes during activity, or when context usage increases or decreases by **10 percentage points from the last reported percentage**. A report at 35% is followed by another at 45% or 25%. Severity crossings and single-step jumps also trigger immediate reports; see the [configuration defaults](config.example.json) and [severity guide](../README.md#configuration-and-severity). Smaller changes do not accumulate separate messages. These thresholds are per agent. No timer wakes an idle model.
 
 Startup emits just the date and time when tokens are not yet available. The first complete set of input/output/cached counters is reported immediately instead of being suppressed by the startup throttle; context percentage becoming available also triggers a report. The first available native cost triggers a report as well. Missing fields are omitted; no `?` placeholders or invented zero counts are injected.
 
@@ -18,7 +18,7 @@ SessionStart, PostToolUse, and PostCompact are registered, plus Claude’s PostT
 
 ## Data and development
 
-`AWARENESS_STATE_DIR` changes the private state directory; default `~/.cache/awareness`. This controls storage only. Removing it resets reporting thresholds and deduplication. Normal CLI configuration locations, including `CLAUDE_CONFIG_DIR`, are respected.
+`AWARENESS_STATE_DIR` changes the private state directory; default `~/.cache/awareness`. This controls storage only. User settings are read from `~/.config/awareness/config.json` (or `AWARENESS_CONFIG_FILE`), bounded to 64 KiB, with validated partial overrides of the reporting defaults and messages. Removing it resets reporting thresholds and deduplication. Normal CLI configuration locations, including `CLAUDE_CONFIG_DIR`, are respected.
 
 Transcript reads are bounded to the last 1 MiB per invocation. Catalog lookup considers at most eight of 32 candidate files, each capped at 1 MiB. Missing records are omitted rather than substituted with another tool's or agent's data. Private state stores timestamps, percentage baselines, hashed identities, CLI-supplied cost, and deduplication markers; no prompts or tool output. Old tool markers are pruned in bounded sweeps. Inactive state directories remain until removed.
 
