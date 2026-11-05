@@ -1,0 +1,170 @@
+{
+  "method": "Cross-check quoted developer-context strings against each child native transcript as of the saved hook generation timestamp, not the later delivery timestamp.",
+  "audits": [
+    {
+      "agent": "web_research",
+      "phase": "initial",
+      "reportGeneratedAt": "2026-11-05T02:59:56.747Z",
+      "nativeUsageRecordedAt": "2026-11-05T02:59:56.644Z",
+      "contextCapacity": 828400,
+      "currentContextTokens": 14861,
+      "nativeCumulative": {
+        "input": 14573,
+        "output": 288,
+        "cached": 11264
+      },
+      "expected": {
+        "percent": 1,
+        "input": "14.6K",
+        "output": "288",
+        "cached": "11.3K",
+        "turnSeconds": 9
+      },
+      "reported": "2026-11-05T02:59:56Z used_context=1% in=14.6K out=288 cached=11.3K\nturn=00:00:09",
+      "countersMatch": true,
+      "deliveredAt": "2026-11-05T02:59:59.958Z",
+      "deliveryDelaySeconds": 3.211,
+      "turnMatches": true,
+      "exactReportFoundInNativeTranscript": true
+    },
+    {
+      "agent": "web_research",
+      "phase": "followup",
+      "reportGeneratedAt": "2026-11-05T03:10:48.624Z",
+      "nativeUsageRecordedAt": "2026-11-05T03:10:48.521Z",
+      "contextCapacity": 828400,
+      "currentContextTokens": 26726,
+      "nativeCumulative": {
+        "input": 111508,
+        "output": 1632,
+        "cached": 95488
+      },
+      "expected": {
+        "percent": 3,
+        "input": "111.5K",
+        "output": "1.6K",
+        "cached": "95.5K",
+        "turnSeconds": 5
+      },
+      "reported": "2026-11-05T03:10:48Z used_context=3% in=111.5K out=1.6K cached=95.5K\nturn=00:00:05",
+      "countersMatch": true,
+      "deliveredAt": "2026-11-05T03:10:54.557Z",
+      "deliveryDelaySeconds": 5.933,
+      "turnMatches": true,
+      "exactReportFoundInNativeTranscript": true
+    },
+    {
+      "agent": "file_review",
+      "phase": "initial",
+      "reportGeneratedAt": "2026-11-05T03:00:00.538Z",
+      "nativeUsageRecordedAt": "2026-11-05T03:00:00.437Z",
+      "contextCapacity": 828400,
+      "currentContextTokens": 14723,
+      "nativeCumulative": {
+        "input": 14548,
+        "output": 175,
+        "cached": 13568
+      },
+      "expected": {
+        "percent": 1,
+        "input": "14.5K",
+        "output": "175",
+        "cached": "13.6K",
+        "turnSeconds": 5
+      },
+      "reported": "2026-11-05T03:00:00Z used_context=1% in=14.5K out=175 cached=13.6K\nturn=00:00:05",
+      "countersMatch": true,
+      "deliveredAt": "2026-11-05T03:00:14.129Z",
+      "deliveryDelaySeconds": 13.591,
+      "turnMatches": true,
+      "exactReportFoundInNativeTranscript": true
+    },
+    {
+      "agent": "file_review",
+      "phase": "followup",
+      "reportGeneratedAt": "2026-11-05T03:10:52.504Z",
+      "nativeUsageRecordedAt": "2026-11-05T03:10:52.426Z",
+      "contextCapacity": 828400,
+      "currentContextTokens": 33313,
+      "nativeCumulative": {
+        "input": 188791,
+        "output": 3405,
+        "cached": 168192
+      },
+      "expected": {
+        "percent": 4,
+        "input": "188.8K",
+        "output": "3.4K",
+        "cached": "168.2K",
+        "turnSeconds": 4
+      },
+      "reported": "2026-11-05T03:10:52Z used_context=4% in=188.8K out=3.4K cached=168.2K\nturn=00:00:04",
+      "countersMatch": true,
+      "deliveredAt": "2026-11-05T03:11:03.990Z",
+      "deliveryDelaySeconds": 11.486,
+      "turnMatches": true,
+      "exactReportFoundInNativeTranscript": true
+    },
+    {
+      "agent": "test_review",
+      "phase": "initial",
+      "reportGeneratedAt": "2026-11-05T03:00:08.003Z",
+      "nativeUsageRecordedAt": "2026-11-05T03:00:07.927Z",
+      "contextCapacity": 828400,
+      "currentContextTokens": 14764,
+      "nativeCumulative": {
+        "input": 14541,
+        "output": 223,
+        "cached": 6784
+      },
+      "expected": {
+        "percent": 1,
+        "input": "14.5K",
+        "output": "223",
+        "cached": "6.8K",
+        "turnSeconds": 6
+      },
+      "reported": "2026-11-05T03:00:08Z used_context=1% in=14.5K out=223 cached=6.8K\nturn=00:00:06",
+      "countersMatch": true,
+      "deliveredAt": "2026-11-05T03:00:10.213Z",
+      "deliveryDelaySeconds": 2.21,
+      "turnMatches": true,
+      "exactReportFoundInNativeTranscript": true
+    },
+    {
+      "agent": "test_review",
+      "phase": "followup",
+      "reportGeneratedAt": "2026-11-05T03:10:58.635Z",
+      "nativeUsageRecordedAt": "2026-11-05T03:10:58.624Z",
+      "contextCapacity": 828400,
+      "currentContextTokens": 30984,
+      "nativeCumulative": {
+        "input": 237894,
+        "output": 3443,
+        "cached": 197248
+      },
+      "expected": {
+        "percent": 3,
+        "input": "237.9K",
+        "output": "3.4K",
+        "cached": "197.2K",
+        "turnSeconds": 4
+      },
+      "reported": "2026-11-05T03:10:58Z used_context=3% in=237.9K out=3.4K cached=197.2K\nturn=00:00:04",
+      "countersMatch": true,
+      "deliveredAt": "2026-11-05T03:11:03.487Z",
+      "deliveryDelaySeconds": 4.852,
+      "turnMatches": true,
+      "exactReportFoundInNativeTranscript": true
+    }
+  ],
+  "summary": {
+    "reportsChecked": 6,
+    "allCountersAndTurnTimesMatch": true,
+    "asynchronousDeliveryDelaySeconds": {
+      "min": 2.21,
+      "max": 13.591
+    },
+    "interpretation": "Accurate as of hook generation time; async delivery can occur after another model request."
+  }
+}
