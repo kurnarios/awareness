@@ -43,6 +43,6 @@ Restart existing CLI sessions. In Codex, review and trust the hooks through `/ho
 
 Unavailable fields are omitted. Codex token counts are cumulative thread totals; Claude counts come from its latest recorded response. Cost is supplied by the CLI, never calculated by this plugin. Your status line is unchanged.
 
-[Behavior and limits](docs/reference.md) · [Verification](docs/verification.md) · [Implementation comparison](docs/comparison.md)
+[Manual check guide](docs/manual-check.md) · [Behavior and limits](docs/reference.md) · [Verification](docs/verification.md) · [Implementation comparison](docs/comparison.md)
 
 MIT licensed. One dependency-free handler is packaged for both CLIs. For development, run `npm test` and `npm run check`; edit `scripts/awareness.mjs` and run `npm run build` to update the plugin copies.

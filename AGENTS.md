@@ -14,3 +14,5 @@ Register PostCompact as observational; deliver the compaction timestamp and re-r
 No runtime dependencies, network requests, model calls, polling loops, or transcript-wide scans in the hook. Keep transcript reads bounded. Use private local state, collision-resistant identities, tool IDs matched against transcript records, and non-waiting concurrency control. Errors must exit successfully and silently.
 
 Run `npm test`, `npm run check`, and `npm run benchmark` for handler changes. Validate both marketplace formats with the installed CLIs when packaging changes. See `docs/verification.md` for live evidence and limitations. Do not change personal CLI configuration to test a plugin; use temporary configuration or session-only loading.
+
+When asked to guide a manual/live check, follow `docs/manual-check.md`. Distinguish actual received context from later transcript audits and fixture results. Do not start live model/subagent tests merely because the user requests documentation.
