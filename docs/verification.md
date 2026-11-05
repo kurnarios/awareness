@@ -1,6 +1,6 @@
 # Verification
 
-Current version: 0.2.3. Version 0.2.3 uses Codex’s cumulative native total-input/total-output/cached counters and formats tokens with K/M/B/T suffixes; the current suite has 22 passing tests. The live receipts below were captured during 0.2.0 development; 0.2.1 preserves the user’s compacted/summarized wording, and 0.2.2 corrects Claude’s input-only percentage calculation. The 0.2.2 suite had 20 passing tests. Tested on macOS arm64 with Node v26.12.1, Codex CLI 0.166.0, and Claude Code 2.1.308. Both CLIs were already authenticated.
+Current version: 0.2.4. This version adds the approved `Be aware: ` prefix once per injected message and has 25 passing tests. Version 0.2.3 uses Codex’s cumulative native total-input/total-output/cached counters and formats tokens with K/M/B/T suffixes; the current suite has 22 passing tests. The live receipts below were captured during 0.2.0 development; 0.2.1 preserves the user’s compacted/summarized wording, and 0.2.2 corrects Claude’s input-only percentage calculation. The 0.2.2 suite had 20 passing tests. Tested on macOS arm64 with Node v26.12.1, Codex CLI 0.166.0, and Claude Code 2.1.308. Both CLIs were already authenticated.
 
 ## Actual live evidence
 
@@ -27,9 +27,9 @@ All live-test scripts remove their temporary profiles, state, debug captures, an
 
 ## Automated verification
 
-`npm test`: 19 tests passed. They cover strict five-second and ten-minute boundaries, ten-percentage-point increases and decreases from the previous report, immediate first populated statistics after empty startup, exact selected-model catalog lookup, rejected manual capacity overrides, concurrent deduplication, session/agent isolation, start lookup without completion records, native durations, cached-input accounting, turn identification, native-only cost, compaction notification, bounded/truncated transcripts, and silent failures.
+`npm test`: 25 tests passed. They cover strict five-second and ten-minute boundaries, ten-percentage-point increases and decreases from the previous report, immediate first populated statistics after empty startup, exact selected-model catalog lookup, rejected manual capacity overrides, concurrent deduplication, session/agent isolation, start lookup without completion records, native durations, cached-input accounting, turn identification, native-only cost, compaction notification, bounded/truncated transcripts, and silent failures.
 
-Sixteen simultaneous hook processes produce exactly one periodic report. No live model subagents were spawned. Isolation and concurrency use fixtures and actual handler processes. Percentage thresholds use controlled fixtures rather than inflated live prompts; no claim is made of a live 10-minute wait or live 10-point context jump.
+Sixteen simultaneous hook processes produce exactly one periodic report. Three live Codex subagents were spawned with independent contexts for web research, file review, and test review. Each received its own initial report and another after more than ten real minutes during ordinary continuation work. A passive question while idle produced no new report, as expected for event-driven hooks. Their three saved schedules were verified independently. See [live subagent evidence](subagent-evidence.json). Claude child usage, cost, and schedules are covered with fixtures, not live Claude subagents. Percentage thresholds use controlled fixtures rather than inflated live prompts; no claim is made of a live 10-minute wait or live 10-point context jump.
 
 `npm run check` verifies both generated plugin copies, manifests, license files, README files, and reproducible icon bytes. `npm run benchmark` measures 50 separate Node process lifetimes; one final handler run measured median 101.76 ms, p95 104.30 ms, maximum 106.60 ms. These include startup and are not blocking agent wait times. The configured handlers are asynchronous; process creation still has overhead.
 

@@ -1,0 +1,59 @@
+{
+  "test": "Live Codex subagents with independent contexts and reporting schedules",
+  "hookVersion": "0.2.3",
+  "inheritedParentConversation": false,
+  "manualHookInvocation": false,
+  "clockOrStateManipulation": false,
+  "parentLastReportedContextPercent": 37,
+  "identityVerified": "Shared parent session id plus distinct child thread id; three separate saved schedules",
+  "agents": [
+    {
+      "agent": "web_research",
+      "task": "Official Node.js web documentation lookup",
+      "firstInjectedContext": "2026-11-05T02:59:56Z used_context=1% in=14.6K out=288 cached=11.3K\nturn=00:00:09",
+      "firstReportAt": 1793847596747,
+      "passiveFollowupAfterTenMinutes": {
+        "toolsRun": false,
+        "newReportReceived": false
+      },
+      "continuationInjectedContext": "2026-11-05T03:10:48Z used_context=3% in=111.5K out=1.6K cached=95.5K\nturn=00:00:05",
+      "secondReportAt": 1793848248624,
+      "elapsedSecondsBetweenReports": 651.877,
+      "secondReportedContextPercent": 3
+    },
+    {
+      "agent": "file_review",
+      "task": "README and implementation trigger review",
+      "firstInjectedContext": "2026-11-05T03:00:00Z used_context=1% in=14.5K out=175 cached=13.6K\nturn=00:00:05",
+      "firstReportAt": 1793847600538,
+      "passiveFollowupAfterTenMinutes": {
+        "toolsRun": false,
+        "newReportReceived": false
+      },
+      "continuationInjectedContext": "2026-11-05T03:10:52Z used_context=4% in=188.8K out=3.4K cached=168.2K\nturn=00:00:04",
+      "secondReportAt": 1793848252504,
+      "elapsedSecondsBetweenReports": 651.966,
+      "secondReportedContextPercent": 4
+    },
+    {
+      "agent": "test_review",
+      "task": "Agent-isolation test review and npm test",
+      "firstInjectedContext": "2026-11-05T03:00:08Z used_context=1% in=14.5K out=223 cached=6.8K\nturn=00:00:06",
+      "firstReportAt": 1793847608003,
+      "passiveFollowupAfterTenMinutes": {
+        "toolsRun": false,
+        "newReportReceived": false
+      },
+      "continuationInjectedContext": "2026-11-05T03:10:58Z used_context=3% in=237.9K out=3.4K cached=197.2K\nturn=00:00:04",
+      "secondReportAt": 1793848258635,
+      "elapsedSecondsBetweenReports": 650.632,
+      "secondReportedContextPercent": 3
+    }
+  ],
+  "status": "Passed: three live Codex agents independently received initial and post-deadline reports",
+  "limitations": [
+    "Reports are event driven; the timer does not wake idle agents.",
+    "This live test covers Codex. Claude child usage/cost/schedules are covered with fixtures, not live Claude subagents.",
+    "The live test used stable installed version 0.2.3. Version 0.2.4 adds only the approved prefix to hook output; additional isolation regression tests were added."
+  ]
+}
