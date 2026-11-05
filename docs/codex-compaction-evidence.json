@@ -1,0 +1,17 @@
+{
+  "host": "codex",
+  "scope": "temporary CODEX_HOME, interactive CLI",
+  "trigger": "/compact typed into CLI; no synthetic context or threshold override",
+  "hookVariable": "PLUGIN_ROOT",
+  "contexts": [
+    "compacted=2026-11-05T02:24:49Z\nRe-read still-needed files, goals, plans, protocols, specs, etc. whose original content was replaced by a summary."
+  ],
+  "modelReplies": [
+    "READY",
+    "READY",
+    "I received no compaction timestamp or re-read reminder from the hook.",
+    "compacted=2026-11-05T02:24:49Z\nRe-read still-needed files, goals, plans, protocols, specs, etc. whose original content was replaced by a summary."
+  ],
+  "nativeCompactionRecords": 1,
+  "temporaryFilesRemoved": true
+}

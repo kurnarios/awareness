@@ -1,0 +1,16 @@
+{
+  "name": "awareness",
+  "version": "0.2.3",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/build.mjs --check",
+    "test": "node --test test/*.test.mjs",
+    "benchmark": "node scripts/benchmark.mjs"
+  },
+  "license": "MIT"
+}

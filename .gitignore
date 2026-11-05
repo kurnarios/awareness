@@ -1,0 +1,10 @@
+node_modules/
+.DS_Store
+.cache/
+
+# Machine-specific installation state and local credentials
+docs/user-installation.json
+.env
+.env.*
+!.env.example
+*.log

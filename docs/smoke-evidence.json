@@ -1,0 +1,34 @@
+{
+  "testedAt": "2026-11-05T02:18:07.355Z",
+  "scope": {
+    "codex": "temporary CODEX_HOME plugin installation",
+    "claude": "session-only --plugin-dir"
+  },
+  "claude": {
+    "contexts": [
+      "2026-11-05T02:18:07Z",
+      "tool=Bash elapsed=00:00:06\n2026-11-05T02:18:16Z used_context=0% in=4557 out=204 cached=4232\nturn=00:00:08"
+    ],
+    "modelReply": "Both commands ran: `sleep 6`, then `true`. Neither printed any output.\n\nThese are the awareness context lines I received this turn:\n\n```\ntool=Bash elapsed=00:00:06\n2026-11-05T02:18:16Z used_context=0% in=4557 out=204 cached=4232\nturn=00:00:08\n```\n\nThe environment block at the start of the turn also had a timestamp line, `2026-11-05T02:18:07Z`, followed by `Today's date is 2026-11-04.`",
+    "selectedModels": {
+      "claude-opus-5-5": {
+        "contextWindow": 1000000
+      }
+    },
+    "cost": {
+      "nativeCostUSD": 0.0508318,
+      "contexts": [
+        "2026-11-05T02:18:27Z used_context=0% in=8604 out=343 cached=8452\ncost_usd=0.0508318"
+      ],
+      "modelReply": "Both `true` calls ran and printed nothing.\n\n`cost_usd=0.0508318`\n\nThat value came after the first `true` call."
+    }
+  },
+  "codex": {
+    "contexts": [
+      "2026-11-05T02:18:11Z",
+      "tool=Bash elapsed=00:00:05\n2026-11-05T02:18:20Z used_context=3% in=14685 out=54 cached=12288\nturn=00:00:11"
+    ],
+    "modelReply": "> tool=Bash elapsed=00:00:05\n> 2026-11-05T02:18:20Z used_context=3% in=14685 out=54 cached=12288\n> turn=00:00:11"
+  },
+  "temporaryFilesRemoved": true
+}

@@ -1,0 +1,9 @@
+{
+  "removedPreviousResearchDirectory": true,
+  "removedIdentifiedTestArtifacts": 9,
+  "preservedOriginalAuthFile": true,
+  "sharedApplicationDatabasesAndModelCaches": "untouched",
+  "manualCodexProfileRemoved": true,
+  "newSmokeTestsSelfClean": true,
+  "removedPreviousClaudeTestSessionCount": 3
+}

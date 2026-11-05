@@ -1,0 +1,17 @@
+{
+  "name": "awareness",
+  "owner": {
+    "name": "kurnarios"
+  },
+  "metadata": {
+    "description": "Minimal time, token, and execution awareness hooks."
+  },
+  "plugins": [
+    {
+      "name": "hooks",
+      "source": "./plugins/claude/hooks",
+      "description": "Quiet time, token, and execution awareness.",
+      "version": "0.2.3"
+    }
+  ]
+}

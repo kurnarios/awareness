@@ -1,0 +1,11 @@
+{
+  "testedAt": "2026-11-05T02:22:21.635Z",
+  "host": "claude",
+  "scope": "session-only --plugin-dir",
+  "modelReply": "I ran `true` twice in separate Bash calls. Both finished with no output.\n\nAfter the first call, the awareness hook context came through with:\n\n- **Compacted timestamp:** `compacted=2026-11-05T02:22:35Z`\n- **Re-read reminder:** \"Re-read still-needed files, goals, plans, protocols, specs, etc. whose original content was replaced by a summary.\"",
+  "postCompactExecuted": true,
+  "contexts": [
+    "compacted=2026-11-05T02:22:35Z\nRe-read still-needed files, goals, plans, protocols, specs, etc. whose original content was replaced by a summary."
+  ],
+  "temporaryFilesRemoved": true
+}

@@ -1,0 +1,10 @@
+{
+  "name": "hooks",
+  "version": "0.2.3",
+  "description": "Quiet time, context, token, and execution awareness.",
+  "author": {
+    "name": "kurnarios"
+  },
+  "license": "MIT",
+  "icon": "./assets/icon.png"
+}
