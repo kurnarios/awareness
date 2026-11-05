@@ -19,7 +19,7 @@ function fixture(t, host = 'claude') {
 const context = output => output?.hookSpecificOutput.additionalContext;
 test('snapshot only once per ten minutes, including resume and clock rollback', t => {
   const { run } = fixture(t);
-  assert.match(context(run()), /^\d{4}-.*Z$/);
+  assert.match(context(run()), /^Be aware: \d{4}-.*Z$/);
   assert.equal(run(), undefined);
   assert.equal(run({}, -1000), undefined);
   assert.equal(run({}, 599999), undefined);
@@ -43,7 +43,7 @@ test('transcript starts work without completion records and match parallel tools
     { timestamp: new Date(now + 1000).toISOString(), payload: { type: 'function_call', call_id: 'b' } },
   ].map(JSON.stringify).join('\n'));
   assert.match(context(run({ hook_event_name: 'PostToolUse', tool_use_id: 'a', tool_name: 'Bash' }, 6100)), /elapsed=00:00:06/);
-  assert.equal(run({ hook_event_name: 'PostToolUse', tool_use_id: 'b' }, 6100)?.hookSpecificOutput.additionalContext, 'tool=tool elapsed=00:00:05');
+  assert.equal(run({ hook_event_name: 'PostToolUse', tool_use_id: 'b' }, 6100)?.hookSpecificOutput.additionalContext, 'Be aware: tool=tool elapsed=00:00:05');
   assert.equal(run({ hook_event_name: 'PostToolUse', tool_use_id: 'a' }, 8000), undefined);
   assert.equal(run({ hook_event_name: 'PostToolUse', tool_use_id: 'unknown' }, 8000), undefined);
 });
@@ -134,7 +134,7 @@ test('turn elapsed uses current Codex turn and excludes tool-result user message
   fs.writeFileSync(p.transcript_path, JSON.stringify({ type: 'user', timestamp: new Date(now).toISOString(), message: { content: 'prompt' } }) + '\n');
   assert.doesNotMatch(context(run()), /turn=/);
   const report = context(run({ hook_event_name: 'PostToolUse', tool_use_id: 'slow', tool_name: 'Bash', duration_ms: 6000 }, 6500));
-  assert.equal(report, 'tool=Bash elapsed=00:00:06\nturn=00:00:06');
+  assert.equal(report, 'Be aware: tool=Bash elapsed=00:00:06\nturn=00:00:06');
 });
 test('Claude can look up a tool start when native duration and completion records are absent', () => {
   const records = [{ type: 'assistant', timestamp: new Date(1000).toISOString(), message: { content: [{ type: 'tool_use', id: 'child-tool' }] } }];
@@ -196,7 +196,7 @@ test('compaction notice bypasses statistics throttling and adds no control decis
     const result = run({ hook_event_name: 'SessionStart', source: 'compact' }, 1001);
     assert.deepEqual(Object.keys(result), ['hookSpecificOutput']);
     assert.equal(result.hookSpecificOutput.hookEventName, 'SessionStart');
-    assert.match(context(result), /^compacted=\d{4}-.*Z\nRe-read still-needed files, goals, plans, protocols, specs, etc\. whose original content was compacted\/summarized\.$/);
+    assert.match(context(result), /^Be aware: compacted=\d{4}-.*Z\nRe-read still-needed files, goals, plans, protocols, specs, etc\. whose original content was compacted\/summarized\.$/);
     assert.ok(context(result).includes(new Date(now + 1001).toISOString().replace(/\.\d{3}Z$/, 'Z')));
     assert.equal(run({}, 1002), undefined);
   }
@@ -236,4 +236,61 @@ test('Codex uses native thread totals for in/out/cached while context stays requ
   assert.equal(totals.input, 25546678);
   assert.equal(totals.output, 91401);
   assert.equal(totals.cached, 25044096);
+});
+
+test('each message has exactly one awareness prefix, including multiline reports', t => {
+  const { run } = fixture(t);
+  for (const output of [run(), run({ hook_event_name: 'PostToolUse', tool_use_id: 'slow-prefix', duration_ms: 6100 }), run({ hook_event_name: 'SessionStart', source: 'compact' })]) {
+    assert.ok(context(output).startsWith('Be aware: '));
+    assert.equal(context(output).match(/Be aware:/g)?.length, 1);
+  }
+});
+test('live-shaped Codex children isolate usage, threshold changes, tool IDs, and schedules', t => {
+  const { dir, run } = fixture(t, 'codex');
+  const a = { hook_event_name: 'PostToolUse', agent_id: 'child-a', transcript_path: path.join(dir, 'a.jsonl'), duration_ms: 1 };
+  const b = { ...a, agent_id: 'child-b', transcript_path: path.join(dir, 'b.jsonl') };
+  const write = (p, percent, input, output, cached) => fs.writeFileSync(p.transcript_path, JSON.stringify({ payload: { type: 'token_count', info: {
+    model_context_window: 100000, last_token_usage: { total_tokens: percent * 1000 },
+    total_token_usage: { input_tokens: input, output_tokens: output, cached_input_tokens: cached },
+  } } }) + '\n');
+  write(a, 30, 123000, 1000, 120000); write(b, 70, 456000, 2000, 450000);
+  assert.match(context(run(a)), /used_context=30% in=123K out=1K cached=120K/);
+  assert.match(context(run(b, 5000)), /used_context=70% in=456K out=2K cached=450K/);
+  write(a, 40, 133000, 1100, 130000);
+  assert.match(context(run(a, 7000)), /used_context=40%/);
+  assert.equal(run(b, 7000), undefined);
+  write(b, 60, 466000, 2100, 460000);
+  assert.match(context(run(b, 8000)), /used_context=60%/);
+  assert.equal(run(a, 8000), undefined);
+  const slow = { tool_use_id: 'same-id-in-two-agents', tool_name: 'Bash', duration_ms: 6100 };
+  assert.match(context(run({ ...a, ...slow }, 9000)), /tool=Bash elapsed=00:00:06/);
+  assert.match(context(run({ ...b, ...slow }, 9000)), /tool=Bash elapsed=00:00:06/);
+  assert.equal(run({ ...a, ...slow }, 10000), undefined);
+  assert.equal(run({ ...b, ...slow }, 10000), undefined);
+  assert.ok(run(a, 607000));
+  assert.equal(run(b, 607000), undefined);
+  assert.ok(run(b, 608000));
+});
+test('Claude children read their own derived or explicit transcript, usage, and native cost', t => {
+  const { dir, p, run } = fixture(t);
+  const childPath = path.join(dir, 'session', 'subagents', 'agent-child-a.jsonl');
+  fs.mkdirSync(path.dirname(childPath), { recursive: true });
+  const records = (input, output, cached, cost) => [
+    { type: 'assistant', message: { model: 'test-model', usage: { input_tokens: input - cached, output_tokens: output, cache_read_input_tokens: cached, cache_creation_input_tokens: 0 } } },
+    { type: 'cost-state', sessionId: p.session_id, totalCostUSD: cost },
+  ].map(JSON.stringify).join('\n');
+  fs.writeFileSync(p.transcript_path, records(180000, 1000, 100000, 9));
+  fs.writeFileSync(childPath, records(20000, 20, 10000, 0.125));
+  const child = { hook_event_name: 'PostToolUse', agent_id: 'child-a', duration_ms: 1 };
+  const childReport = context(run(child));
+  assert.match(childReport, /used_context=10% in=20K out=20 cached=10K/);
+  assert.match(childReport, /cost_usd=0.125/);
+  assert.doesNotMatch(childReport, /cost_usd=9|used_context=90%/);
+  const parentReport = context(run());
+  assert.match(parentReport, /used_context=90% in=180K out=1K cached=100K/);
+  assert.match(parentReport, /cost_usd=9/);
+  const explicit = path.join(dir, 'other-child.jsonl');
+  fs.writeFileSync(explicit, records(40000, 30, 30000, 0.25));
+  assert.match(context(run({ ...child, agent_id: 'child-b', agent_transcript_path: explicit })), /used_context=20% in=40K out=30 cached=30K/);
+  assert.equal(run(child), undefined);
 });

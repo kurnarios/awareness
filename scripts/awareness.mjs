@@ -201,7 +201,7 @@ export function handle(p, { host = 'codex', env = process.env, now = Date.now() 
   }
   if (event === 'SessionStart' && p.source === 'compact') {
     return { hookSpecificOutput: { hookEventName: event, additionalContext:
-      `compacted=${new Date(now).toISOString().replace(/\.\d{3}Z$/, 'Z')}\nRe-read still-needed files, goals, plans, protocols, specs, etc. whose original content was compacted/summarized.` } };
+      `Be aware: compacted=${new Date(now).toISOString().replace(/\.\d{3}Z$/, 'Z')}\nRe-read still-needed files, goals, plans, protocols, specs, etc. whose original content was compacted/summarized.` } };
   }
   const stateFile = path.join(dir, 'snapshot.json');
   const parts = [];
@@ -253,7 +253,7 @@ export function handle(p, { host = 'codex', env = process.env, now = Date.now() 
     if (turn !== undefined) parts.push(`turn=${elapsed(turn)}`);
     const cost = nativeCost(p, host, getRecords());
     if (cost !== undefined) parts.push(`cost_usd=${cost}`);
-    return { hookSpecificOutput: { hookEventName: event, additionalContext: parts.join('\n') } };
+    return { hookSpecificOutput: { hookEventName: event, additionalContext: `Be aware: ${parts.join('\n')}` } };
   }
 }
 
