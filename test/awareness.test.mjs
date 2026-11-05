@@ -8,7 +8,7 @@ import { handle, elapsed, usage, toolDuration, turnElapsed, modelCapacity, nativ
 function fixture(t, host = 'claude') {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'awareness-test-'));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
-  const env = { AWARENESS_STATE_DIR: path.join(dir, 'state'), CLAUDE_CONFIG_DIR: dir };
+  const env = { AWARENESS_STATE_DIR: path.join(dir, 'state'), CLAUDE_CONFIG_DIR: dir, AWARENESS_CONFIG_FILE: path.join(dir, 'config.json') };
   fs.mkdirSync(path.join(dir, 'cache', 'model-catalog'), { recursive: true });
   fs.writeFileSync(path.join(dir, 'cache', 'model-catalog', 'account-cc.json'), JSON.stringify({ catalog: { config: { models: [{ id: 'test-model', runtime: { max_input_tokens: 200000 } }] } } }));
   const now = Date.now();
