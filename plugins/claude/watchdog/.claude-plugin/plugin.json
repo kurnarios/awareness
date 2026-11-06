@@ -1,6 +1,6 @@
 {
   "name": "watchdog",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "An idle self-check reminder, never approval or interruption.",
   "author": {
     "name": "kurnarios"

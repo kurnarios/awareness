@@ -8,6 +8,14 @@ function cancel(state) {
   state?.timer?.cancel();
   if (state) state.timer = undefined;
 }
+// A native turn in flight means real child work. An idle timer or a live background
+// shell does not: those idle children must still get their own checks.
+function childWorking() {
+  for (const [key, state] of agents) {
+    if (key !== 'main' && state.busy && state.turnId !== undefined) return true;
+  }
+  return false;
+}
 async function readConfig($) {
   try {
     const override = await $.env.get('AWARENESS_CONFIG_FILE');
@@ -27,6 +35,13 @@ async function started($, e, next) {
     generation: ++generation, busy: true, turnId: e.turnId,
     reminded: Boolean(old?.reminded || isReminder(e.text)),
   });
+  if (key !== 'main') {
+    const main = agents.get('main');
+    if (main && !main.busy && !main.reminded) {
+      cancel(main);
+      main.waitingForChildren = true;
+    }
+  }
   return next(e);
 }
 async function finished($, e, next) {
@@ -39,31 +54,42 @@ async function finished($, e, next) {
     state.reminded = true;
     if (key === 'main') for (const child of agents.values()) { cancel(child); child.reminded = true; }
   }
-  if (!state.reminded) {
-    const config = await readConfig($);
-    if (agents.get(key) === state && !state.busy && !state.reminded) {
-      state.timer = $.clock.after(config.timeoutMs, async () => {
-        if (agents.get(key) !== state || state.busy || state.reminded) return;
-        state.reminded = true; // Claim before any asynchronous delivery; never self-rearm.
-        state.timer = undefined;
-        try {
-          const text = reminder(config);
-          if (key === 'main') {
-            // This API queues until idle and retains plugin attribution (asUser is never set).
-            await $.prompt.submit({ text });
-          } else {
-            const children = await $.agent.list();
-            const child = children.find(a => a.id === key || a.agentId === key);
-            if (!child || !['idle', 'waiting', 'completed'].includes(child.status)) return;
-            if (agents.get(key) !== state || state.busy) return;
-            await $.session.send({ to: { agentId: key }, text });
-          }
-        } catch { /* Optional reminders fail silently, with no retry loop. */ }
-      });
-    }
+  if (!state.reminded) await arm($, key, state);
+  if (key !== 'main') {
+    const main = agents.get('main');
+    if (main?.waitingForChildren && !childWorking()) await arm($, 'main', main);
   }
   return next(e);
 }
+async function arm($, key, state) {
+  if (agents.get(key) !== state || state.busy || state.reminded || state.timer) return;
+  if (key === 'main' && childWorking()) { state.waitingForChildren = true; return; }
+  const config = await readConfig($);
+  if (agents.get(key) !== state || state.busy || state.reminded || state.timer) return;
+  if (key === 'main' && childWorking()) { state.waitingForChildren = true; return; }
+  state.waitingForChildren = false;
+  const timer = $.clock.after(config.timeoutMs, async () => {
+    if (agents.get(key) !== state || state.timer !== timer || state.busy || state.reminded) return;
+    state.timer = undefined;
+    if (key === 'main' && childWorking()) { state.waitingForChildren = true; return; }
+    state.reminded = true; // Claim before any asynchronous delivery; never self-rearm.
+    try {
+      const text = reminder(config);
+      if (key === 'main') {
+        // This API queues until idle and retains plugin attribution (asUser is never set).
+        await $.prompt.submit({ text });
+      } else {
+        const children = await $.agent.list();
+        const child = children.find(a => a.id === key || a.agentId === key);
+        if (!child || !['idle', 'waiting', 'completed'].includes(child.status)) return;
+        if (agents.get(key) !== state || state.busy) return;
+        await $.session.send({ to: { agentId: key }, text });
+      }
+    } catch { /* Optional reminders fail silently, with no retry loop. */ }
+  });
+  state.timer = timer;
+}
+
 async function submitted($, e, next) {
   if (!isReminder(e.text)) {
     // Main-thread input does not reset independent children's timers.

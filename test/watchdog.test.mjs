@@ -175,12 +175,13 @@ async function claudeFixture(t) {
 test('Claude schedules the configured ten-second idle check and queues attributed main/child reminders independently', async t => {
   const f = await claudeFixture(t);
   await f.turn('main-1'); await f.turn('child-1', 'child-a');
-  assert.equal(f.timers.length, 2); assert.ok(f.timers.every(t => t.ms === 10000));
-  await f.timers[1].callback(); await f.timers[0].callback();
+  assert.equal(f.timers[0].cancelled, true, 'child work invalidates the earlier parent deadline');
+  assert.equal(f.timers.length, 3); assert.ok(f.timers.every(t => t.ms === 10000));
+  await f.timers[1].callback(); await f.timers[2].callback();
   assert.equal(f.deliveries[0].to.agentId, 'child-a');
   assert.equal(f.deliveries[1].kind, 'main');
   assert.ok(f.deliveries.every(d => d.text.includes(envelope) && d.text.endsWith('Cooperative test') && !('asUser' in d)));
-  await f.timers[0].callback(); assert.equal(f.deliveries.length, 2);
+  await f.timers[2].callback(); assert.equal(f.deliveries.length, 2);
 });
 
 test('Claude child wake-up cannot rearm itself even when the host omits the resumed prompt text', async t => {
@@ -234,4 +235,63 @@ test('Claude reloads partial configuration per episode and main input does not r
   await f.event('turn.start', { turnId: 'stop', text: 'work' });
   await f.event('turn.complete', { turnId: 'stop', isAborted: true });
   await f.timers[0].callback(); assert.equal(f.deliveries.length, 1);
+});
+
+test('Claude defers the parent during real child work and rearms after it without another user prompt', async t => {
+  const f = await claudeFixture(t);
+  await f.event('prompt.submit', { text: 'Authorized task' });
+  await f.event('turn.start', { turnId: 'main-1', text: 'Authorized task' });
+  await f.event('session.send', { to: { agentId: 'child-a' }, text: 'Authorized task' });
+  await f.event('turn.start', { turnId: 'child-1', agentId: 'child-a', text: 'Authorized task' });
+  await f.event('turn.complete', { turnId: 'main-1', isAborted: false });
+  assert.equal(f.timers.length, 0, 'a working child makes parent inactivity legitimate');
+  await f.event('turn.complete', { turnId: 'child-1', agentId: 'child-a', isAborted: false });
+  assert.equal(f.timers.length, 2, 'idle child gets its own check and the parent gets a fresh quiet period');
+  assert.ok(f.timers.every(t => t.ms === 10000));
+  await f.timers[0].callback();
+  assert.equal(f.deliveries[0].to.agentId, 'child-a');
+  await f.event('turn.start', { turnId: 'child-receipt', agentId: 'child-a', text: reminder(defaults) });
+  assert.equal(f.timers[1].cancelled, true, 'child responding to its check is real work too');
+  await f.timers[1].callback();
+  assert.equal(f.deliveries.length, 1, 'the old parent alarm cannot fire during the child response');
+  await f.event('turn.complete', { turnId: 'child-receipt', agentId: 'child-a', isAborted: false });
+  assert.equal(f.timers.length, 3);
+  assert.equal(f.timers[2].ms, 10000, 'parent timeout restarts after the child finishes');
+  await f.timers[2].callback();
+  assert.deepEqual(f.deliveries.map(d => d.kind), ['child', 'main']);
+  await f.timers[1].callback();
+  assert.equal(f.deliveries.length, 2, 'retired parent alarms stay retired');
+});
+
+test('Claude waits for the last working child and explicit user stop prevents parent rearming', async t => {
+  const f = await claudeFixture(t);
+  await f.turn('main');
+  const original = f.timers[0];
+  await f.event('turn.start', { turnId: 'a', agentId: 'child-a', text: 'work' });
+  await f.event('turn.start', { turnId: 'b', agentId: 'child-b', text: 'work' });
+  assert.equal(original.cancelled, true);
+  await f.event('turn.complete', { turnId: 'a', agentId: 'child-a', isAborted: false });
+  assert.equal(f.timers.length, 2, 'only child a is armed while child b works');
+  await original.callback(); assert.equal(f.deliveries.length, 0);
+  await f.event('turn.complete', { turnId: 'b', agentId: 'child-b', isAborted: false });
+  assert.equal(f.timers.length, 4, 'last child completion arms its check and a new parent deadline');
+  await f.event('turn.start', { turnId: 'again', agentId: 'child-a', text: 'work' });
+  await f.event('turn.start', { turnId: 'stop', text: 'work' });
+  await f.event('turn.complete', { turnId: 'stop', isAborted: true });
+  await f.event('turn.complete', { turnId: 'again', agentId: 'child-a', isAborted: false });
+  assert.equal(f.timers.length, 4, 'an explicit stop cannot be undone by a late child completion');
+  for (const timer of f.timers) await timer.callback();
+  assert.equal(f.deliveries.length, 0);
+});
+
+test('an idle child timer or a child message with no running turn cannot permanently silence the parent', async t => {
+  const f = await claudeFixture(t);
+  await f.turn('child-idle', 'child-a');
+  await f.event('session.send', { to: { agentId: 'child-b' }, text: 'queued work' });
+  await f.turn('main');
+  assert.equal(f.timers.length, 2, 'pending callbacks and timers are not real child activity');
+  await f.timers[1].callback();
+  assert.equal(f.deliveries[0].kind, 'main');
+  await f.timers[0].callback();
+  assert.equal(f.deliveries[1].to.agentId, 'child-a', 'child delivery remains independent');
 });

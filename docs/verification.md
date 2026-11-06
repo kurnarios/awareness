@@ -1,18 +1,36 @@
 # Verification
 
-Current version: 0.4.0. This release renames `hooks` to `reminders` and adds the separate `watchdog` plugin to both marketplaces. The reminders runtime is unchanged by the rename. The suite now has 64 passing tests, including Watchdog configuration, generation/timer isolation, stale-input and explicit-stop suppression, one-shot delivery, child routing, queue cleanup, and real local-socket framing against a fake server. These are automated checks, not live model wake-up receipts. See [Watchdog implementation and limits](watchdog.md) and the [cooperative ten-second manual check](watchdog-manual-check.md).
+Current version: 0.4.1. This patch defers Claude's parent reminder only during observed child turns and rearms a full idle timeout after the last working child finishes. An idle child's timer or background process is not a blocker. Child delivery, message text, and Codex runtime behavior are unchanged. Version 0.4.0 introduced the separate watchdog plugin and renamed hooks to reminders. The reminders runtime is unchanged.
+
+Claude 0.4.0 main-agent and child wake-ups were both received and audited against native transcripts. See [the sanitized live evidence](watchdog-claude-live-evidence.json). The 0.4.1 parent fix has automated regression coverage; its live behavior and Codex wake-up remain unverified.
 
 The historical reports below were collected with the old `hooks` identity and retain their original versions and paths. Version 0.3.1 changes snapshot and compaction timestamps to local time with an explicit UTC offset. Automated checks cover UTC, positive and negative fractional offsets, local date rollover, and both occurrences of a repeated hour at the daylight-saving transition. This timestamp change has not been checked through live model receipt; historical evidence retains its original UTC timestamps. Live receipts below cover different development stages: the basic smoke tests began in 0.2.0, the user's compacted/summarized wording landed in 0.2.1, Claude's percentage accounting was corrected in 0.2.2, cumulative Codex counters and number suffixes landed in 0.2.3, and 0.2.4 adds the approved prefix. The timed live subagent run deliberately kept 0.2.3 installed throughout.
 
 The recorded environment was macOS arm64, Node v26.12.1, Codex CLI 0.166.0, and Claude Code 2.1.308. Follow the [manual check guide](manual-check.md) to repeat the observations; record the versions used in each new run.
 
+## Version 0.4.1 parent eligibility regression
+
+All 67 automated tests passed. The new cases reproduce a working child deferring the parent, the parent obtaining a fresh timeout without another user prompt, a child resuming to answer its own reminder, multiple children finishing at different times, explicit user stops, and idle child timers not permanently suppressing the parent. Existing child-delivery and non-approval checks continue to pass; the message body and Codex runtime sources are unchanged.
+
+`npm run check` and `npm run benchmark` passed. The 50-process measurements were median/p95/max 103.43/107.80/109.04 ms for reminders and 104.62/106.58/108.27 ms for Watchdog. These measurements cover Node entry-point process lifetimes, not the native Claude module's idle interval or live model delivery.
+
+Both Claude plugins and the marketplace passed strict CLI validation. Both Codex plugins installed as 0.4.1 in a fresh temporary `CODEX_HOME`, removed afterwards; all four generated manifests match package.json. These checks do not establish a live pass for the parent-deferral fix. The separate recorded 0.4.0 main/child receipts remain the live baseline.
+
 ## Version 0.4.0 automated and packaging checks
 
 The current development check used Node v26.12.1, Codex CLI 0.167.0, and Claude Code 2.1.308. `npm test` passed all 64 tests; `npm run check` passed; `npm run benchmark` measured 50 process lifetimes for each Node handler. Reminders measured median 100.82 ms, p95 103.22 ms, maximum 103.81 ms; Watchdog measured median 100.12 ms, p95 102.07 ms, maximum 102.58 ms. These are local observations, not performance guarantees or agent wait times.
 
-Both Claude plugin directories passed `claude plugin validate --strict --profile directory`, and the Claude marketplace passed strict validation. The validator statically accepted Watchdog's native module events, timer/configuration calls, and attributed queue/message calls; it did not execute a live model turn. Codex registered the local marketplace and installed both `reminders@awareness` and `watchdog@awareness` in a fresh temporary `CODEX_HOME`, which was removed afterwards. All four generated plugin manifests and the Claude marketplace entries agree with package version 0.4.0.
+Both Claude plugin directories passed `claude plugin validate --strict --profile directory`, and the Claude marketplace passed strict validation. The validator statically accepted Watchdog's native module events, timer/configuration calls, and attributed queue/message calls; it did not execute a live model turn. Codex registered the local marketplace and installed both `reminders@awareness` and `watchdog@awareness` in a fresh temporary `CODEX_HOME`, which was removed afterwards. Those checks used package version 0.4.0; all four generated manifests matched it.
 
-No personal CLI configuration, installed user plugin, or active plugin configuration was changed for these checks. The current active configuration path was inspected before choosing test settings: no profile file or `AWARENESS_CONFIG_FILE` override was present. The [manual procedure](watchdog-manual-check.md) explicitly rechecks the tester's actual environment, merges `watchdog.timeoutMs: 10000`, and explains the experiment to the cooperating agent. The ten-second setting has fixture coverage; a live main/child wake-up has not been run or claimed.
+No personal CLI configuration, installed user plugin, or active plugin configuration was changed for these checks. The current active configuration path was inspected before choosing test settings: no profile file or `AWARENESS_CONFIG_FILE` override was present. The [manual procedure](watchdog-manual-check.md) explicitly rechecks the tester's actual environment, merges `watchdog.timeoutMs: 10000`, and explains the experiment to the cooperating agent. The ten-second setting was subsequently used for the live Claude checks below. The earlier packaging checks did not establish model receipt.
+
+## Watchdog live Claude evidence
+
+[watchdog-claude-live-evidence.json](watchdog-claude-live-evidence.json) records user-collected main and child receipts from installed Watchdog 0.4.0 at a configured 10000-ms timeout, then bounded native transcript audits. READY-to-delivery intervals were 10075 ms for the first main check and 10094 ms for the child. Exact quoted reminder text matches the native delivered text. The READY row is not an independently persisted timer-arm timestamp.
+
+The child notification used Claude's coordinator-style message channel and arrived before the parent's second notification. There was no parent-model SendMessage relay call; the child handback also used a native plugin-created tool-use identifier. This supports the user's conclusion: two independent deliveries, one per context. The extra child line, `Address this before completing your current task.`, is native routing text, not a changed configured reminder. No auditing tool stopped either test waiter. The agents reported both still running; their process status was not independently probed.
+
+The parent still received a reminder while the child was responding, exposing the eligibility issue addressed in 0.4.1. Do not count the 0.4.0 delivery evidence as a live pass for the later fix, for all approval-boundary cases, or for Codex.
 
 ## Actual live evidence
 

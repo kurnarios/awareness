@@ -82,6 +82,14 @@ The child must register its own background waiter and end its setup turn. The pa
 
 Test each host separately. Codex child success does not establish Claude child success. Concurrent parent/child checks must preserve independent timers and source identities.
 
+### Parent eligibility control
+
+Version 0.4.1 defers the parent only while a child is actually inside a native turn. For the regression check, let the child do useful work that naturally lasts longer than the configured timeout, while the parent waits. Do not substitute sleeping or a background heartbeat for real child work. The parent should receive no reminder during that work. After the last child turn finishes, a still-idle parent should become eligible after a full new timeout without another user prompt.
+
+The never-finishing-background-waiter case is different: the child is idle after READY, so its own reminder should still arrive. A separate parent reminder can also be valid when no child is working. If the child is responding to its reminder when the parent's timer would fire, defer the parent until that child response finishes. Check multiple children, explicit user stops, and a child whose timer is pending but whose model is idle; none should permanently disable the parent's future checks.
+
+A child saying the message came from the coordinator does not establish a relay: the plugin uses native `session.send`, which is displayed through that channel. Collect the child's receipt first, then audit both timelines and parent SendMessage calls. The [0.4.0 evidence](watchdog-claude-live-evidence.json) shows the child's delivery preceding the parent's second reminder with no relay call. Keep direct receipt, routing audit, and parent-eligibility results separate.
+
 ## 6. Check silent stops and approval boundaries
 
 After a fresh real input has rearmed eligibility, give a small staged task: perform its first harmless step, then intentionally end the turn silently with a clearly authorized second step remaining. Explain that this simulates an accidental unexplained stop and that Watchdog is expected to trigger the self-check. Do not give another user prompt to make the second step happen.

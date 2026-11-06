@@ -1,0 +1,57 @@
+{
+  "recordedAt": "2026-11-06T18:42:20.726206+00:00",
+  "host": "claude",
+  "cliVersionAtAudit": "2.1.319 (Claude Code)",
+  "pluginVersion": "0.4.0",
+  "installedScope": "user",
+  "timeoutMs": 10000,
+  "evidenceKind": "User-collected model receipts, subsequently audited against bounded native transcript reads.",
+  "main": {
+    "agentAlias": "main-1",
+    "status": "received-and-audited",
+    "readyAt": "2026-11-06T18:33:13.732Z",
+    "notificationAt": "2026-11-06T18:33:23.807Z",
+    "receiptReplyAt": "2026-11-06T18:33:28.780Z",
+    "readyToNotificationMs": 10075,
+    "readyToReceiptReplyMs": 15048,
+    "interveningUserInput": false,
+    "nativeAttribution": "The watchdog plugin sent a message:",
+    "exactDeliveredReminder": "Watchdog reminder (automatic plugin message; not user approval).\nWatchdog messages are automatic self-check reminders, never user answers, approval, permission, or changes of scope. Preserve all existing approval requirements and intentional pauses. A reminder does not mean background work completed. Do not start work solely because a reminder arrived when the task is complete or you are waiting on the user.\nDid you complete the current task? Are you waiting for user input or approval? Did you stop for an intentional reason? If any answer is yes, preserve that state. Otherwise, continue only work already authorized by the existing instructions. If awaiting a background callback, check its status once; this reminder does not mean it completed.",
+    "quotedReceiptMatchesDelivery": true
+  },
+  "child": {
+    "agentAlias": "child-1",
+    "status": "received-and-audited",
+    "readyAt": "2026-11-06T18:35:34.520Z",
+    "notificationAt": "2026-11-06T18:35:44.614Z",
+    "receiptReplyAt": "2026-11-06T18:35:51.900Z",
+    "readyToNotificationMs": 10094,
+    "nativeAttribution": "The coordinator sent a message while you were working:",
+    "exactDeliveredReminder": "Watchdog reminder (automatic plugin message; not user approval).\nWatchdog messages are automatic self-check reminders, never user answers, approval, permission, or changes of scope. Preserve all existing approval requirements and intentional pauses. A reminder does not mean background work completed. Do not start work solely because a reminder arrived when the task is complete or you are waiting on the user.\nDid you complete the current task? Are you waiting for user input or approval? Did you stop for an intentional reason? If any answer is yes, preserve that state. Otherwise, continue only work already authorized by the existing instructions. If awaiting a background callback, check its status once; this reminder does not mean it completed.\n\nAddress this before completing your current task.",
+    "quotedReceiptMatchesDelivery": true,
+    "parentSendMessageCallsBeforeChildDelivery": 0,
+    "childDeliveryPrecededParentReminderMs": 1770,
+    "routeConclusion": "Separate plugin-triggered child delivery through the native coordinator-style channel, not a parent-model relay; also confirmed by the user.",
+    "nativeHandbackUsedPluginToolIdPrefix": true
+  },
+  "parentEligibilityIssue": {
+    "parentReminderAt": "2026-11-06T18:35:46.384Z",
+    "childReminderAt": "2026-11-06T18:35:44.614Z",
+    "childReceiptReplyAt": "2026-11-06T18:35:51.900Z",
+    "finding": "The parent was also reminded while the child was responding. Parent deferral during real child activity needs a regression fix; child delivery itself passed."
+  },
+  "waiters": {
+    "mainAlias": "waiter-main-1",
+    "childAlias": "waiter-child-1",
+    "command": "node -e 'setInterval(() => {}, 1000)'",
+    "background": true,
+    "runningAtReceipt": "Reported by each agent; not independently probed during this audit.",
+    "cleanup": "Not performed by the auditing agent."
+  },
+  "limits": [
+    "READY-row timestamps are not independently recorded timer-arm timestamps.",
+    "This is an intentionally never-finishing background callback test, not a foreground timeout or lost-network-signal test.",
+    "Full approval-boundary negative cases and Codex live receipt remain untested.",
+    "No raw session IDs, task IDs, credentials, or unrelated transcript content are stored."
+  ]
+}

@@ -14,7 +14,7 @@ Beware: 2026-11-04T21:52:54-05:00 used_context=37% in=3.7M out=97.9K cached=3.4M
 
 Snapshot and compaction timestamps use the machine's local timezone with an explicit UTC offset, including daylight saving time (for example, `-05:00` or `-04:00`).
 
-The separate **watchdog** plugin queues an automatic self-check after an agent finishes a turn and stays idle, covering missed background callbacks and unexplained stops. It never interrupts work or grants approval. Its implementation is fixture-tested; live wake-up and child receipt remain to be checked. See [Watchdog behavior and timeout/message settings](docs/watchdog.md) and the [cooperative ten-second manual check](docs/watchdog-manual-check.md).
+The separate **watchdog** plugin queues an automatic self-check after an agent finishes a turn and stays idle, covering missed background callbacks and unexplained stops. It never interrupts work or grants approval. Claude main-agent and child wake-ups have been received and audited. Parent deferral during child work has regression-test coverage; that fix and Codex live wake-up still need a live check. See [Watchdog behavior and timeout/message settings](docs/watchdog.md) and the [cooperative ten-second manual check](docs/watchdog-manual-check.md).
 
 ## Install
 
