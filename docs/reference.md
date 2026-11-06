@@ -33,6 +33,6 @@ claude plugin validate --strict --profile directory plugins/claude/hooks
 claude plugin validate --strict .claude-plugin/marketplace.json
 ```
 
-Generated plugin copies must match `scripts/awareness.mjs`. The clock icon is reproducibly generated from simple geometry by `scripts/icon.mjs` and packaged as a 512×512 PNG.
+Generated plugin copies must match `scripts/awareness.mjs`. The clock icon is generated from simple geometry by `scripts/icon.mjs` and packaged as a 512×512 PNG. Build checks compare its metadata and decompressed pixels and validate its IDAT checksum; different valid zlib compression bytes across Node builds are accepted.
 
 Run `node scripts/smoke.mjs` for opt-in live tests using the installed, authenticated CLIs. It uses a temporary Codex profile and session-only Claude loading, verifies actual context delivery and native cost on resume, writes sanitized [evidence](docs/smoke-evidence.json), and removes its temporary files. No personal CLI settings are edited. `node scripts/compaction-smoke.mjs` additionally proves actual Claude compaction and reminder delivery in a single streaming session, then cleans its test data. See [verification details](docs/verification.md).

@@ -1,5 +1,29 @@
 // Deterministic, code-native clock mark; no image-generation service or build dependencies.
-import { deflateSync } from 'node:zlib';
+import { deflateSync, inflateSync } from 'node:zlib';
+function chunk(type, data) {
+  const text = Buffer.from(type), combined = Buffer.concat([text, data]);
+  let crc = 0xffffffff;
+  for (const byte of combined) { crc ^= byte; for (let i = 0; i < 8; i++) crc = crc & 1 ? 0xedb88320 ^ crc >>> 1 : crc >>> 1; }
+  const length = Buffer.alloc(4), checksum = Buffer.alloc(4);
+  length.writeUInt32BE(data.length); checksum.writeUInt32BE((crc ^ 0xffffffff) >>> 0);
+  return Buffer.concat([length, combined, checksum]);
+}
+export function sameIconPNG(actual, expected) {
+  if (actual.equals(expected)) return true;
+  try {
+    // The generated format is signature + IHDR + one IDAT + IEND. Compare
+    // metadata and pixels exactly; valid zlib compression can vary by runtime.
+    if (!actual.subarray(0, 33).equals(expected.subarray(0, 33)) ||
+        !actual.subarray(-12).equals(expected.subarray(-12))) return false;
+    const pixels = png => {
+      if (png.length < 57 || png.readUInt32BE(33) !== png.length - 57) throw new Error('Invalid IDAT length');
+      const data = png.subarray(41, -16);
+      if (!chunk('IDAT', data).equals(png.subarray(33, -12))) throw new Error('Invalid IDAT checksum');
+      return inflateSync(data, { maxOutputLength: (512 * 3 + 1) * 512 });
+    };
+    return pixels(actual).equals(pixels(expected));
+  } catch { return false; }
+}
 export function iconPNG() {
   const size = 512, scale = 2, image = Buffer.alloc((size * 3 + 1) * size);
   const segment = (x, y, ax, ay, bx, by, r) => {
@@ -22,14 +46,6 @@ export function iconPNG() {
     }
     const offset = y * (size * 3 + 1) + x * 3 + 1;
     color.forEach((n, i) => image[offset + i] = Math.round(n));
-  }
-  function chunk(type, data) {
-    const text = Buffer.from(type), combined = Buffer.concat([text, data]);
-    let crc = 0xffffffff;
-    for (const byte of combined) { crc ^= byte; for (let i = 0; i < 8; i++) crc = crc & 1 ? 0xedb88320 ^ crc >>> 1 : crc >>> 1; }
-    const length = Buffer.alloc(4), checksum = Buffer.alloc(4);
-    length.writeUInt32BE(data.length); checksum.writeUInt32BE((crc ^ 0xffffffff) >>> 0);
-    return Buffer.concat([length, combined, checksum]);
   }
   const header = Buffer.alloc(13); header.writeUInt32BE(size, 0); header.writeUInt32BE(size, 4); header[8] = 8; header[9] = 2;
   return Buffer.concat([Buffer.from('89504e470d0a1a0a', 'hex'), chunk('IHDR', header), chunk('IDAT', deflateSync(image)), chunk('IEND', Buffer.alloc(0))]);

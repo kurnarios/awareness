@@ -1,9 +1,9 @@
 import fs from 'node:fs';
-import { iconPNG } from './icon.mjs';
+import { iconPNG, sameIconPNG } from './icon.mjs';
 const icon = iconPNG();
 const { version } = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 function binary(file, data) {
-  if (check) { if (!fs.readFileSync(file).equals(data)) throw new Error(`Stale: ${file}`); }
+  if (check) { if (!sameIconPNG(fs.readFileSync(file), data)) throw new Error(`Stale: ${file}`); }
   else { fs.mkdirSync(file.slice(0, file.lastIndexOf('/')), { recursive: true }); fs.writeFileSync(file, data); }
 }
 const check = process.argv.includes('--check');
