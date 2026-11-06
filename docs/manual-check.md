@@ -1,5 +1,7 @@
 # Manual check guide
 
+This guide covers `reminders@awareness` (formerly `hooks`). For Watchdog's separate cooperative idle-wake test, including the real configuration override to ten seconds and never-finishing background waiter, use [Watchdog manual check](watchdog-manual-check.md). Do not apply that timeout override to the ten-minute reminders test below.
+
 Use this procedure to verify what an agent actually receives during ordinary work, including independent subagent reporting. The assistant should guide the run, keep track of deadlines, collect exact quotes, and audit them against native records.
 
 To start a future run, ask:
@@ -122,3 +124,11 @@ Remove temporary profiles, captures, auth symlinks, and test-created artifacts o
 - [Broader verification and remaining limits](verification.md)
 
 The prior live run established Codex parent/child isolation and independent ten-minute schedules. Claude child behavior was covered by automated fixtures, not live subagents.
+
+## Watchdog: cooperative ten-second check
+
+Watchdog is a separate plugin and a separate experiment. Follow the [full Watchdog manual procedure](watchdog-manual-check.md): inspect the real loader and active configuration first, preserve existing values, and override only `watchdog.timeoutMs` to `10000` through the existing configuration file/override. Confirm the effective setting from the testing agent's environment.
+
+Explain the experiment to that agent: it should start a never-finishing script through a normal background/callback mechanism, retain its cleanup handle, say READY once, and then stay genuinely idle until Watchdog arrives. Tell it that the expected delay is ten seconds after its setup turn ends and that quoting the received reminder is authorized test work. The agent is cooperating with the check; it must not repair the intentionally endless waiter, poll for progress, invoke hooks, or use foreground waits to fill the interval.
+
+Do not send a user follow-up before receipt or the observation deadline. Repeat for a separately identified child, distinguish actual received context from queue acknowledgments and later audits, check the non-approval boundary and absence of reminder loops, then explicitly clean up the test-owned waiter and restore the original plugin configuration. This documentation does not start that live test.

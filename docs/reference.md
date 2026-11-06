@@ -1,6 +1,8 @@
 # Behavior and implementation reference
 
-Reports appear on the first eligible event, then every ten minutes during activity, or when context usage increases or decreases by **10 percentage points from the last reported percentage**. A report at 35% is followed by another at 45% or 25%. Severity crossings and single-step jumps also trigger immediate reports; see the [configuration defaults](config.example.json) and [severity guide](../README.md#configuration-and-severity). Smaller changes do not accumulate separate messages. These thresholds are per agent. No timer wakes an idle model.
+This page describes `reminders@awareness`, renamed from `hooks` in 0.4.0. The independently installed Watchdog plugin has its own [behavior/configuration reference](watchdog.md) and [cooperative manual check](watchdog-manual-check.md).
+
+Reports appear on the first eligible event, then every ten minutes during activity, or when context usage increases or decreases by **10 percentage points from the last reported percentage**. A report at 35% is followed by another at 45% or 25%. Severity crossings and single-step jumps also trigger immediate reports; see the [configuration defaults](config.example.json) and [severity guide](../README.md#reminders-configuration-and-severity). Smaller changes do not accumulate separate messages. These thresholds are per agent. No timer wakes an idle model.
 
 Snapshot and compaction timestamps use local ISO 8601 date/time with an explicit UTC offset (for example, `2026-11-05T21:40:07-05:00`). They follow the machine timezone (or the hook process’s inherited `TZ`) and the offset at that instant, including daylight saving time.
 
@@ -29,7 +31,7 @@ npm run build
 npm test
 npm run check
 npm run benchmark
-claude plugin validate --strict --profile directory plugins/claude/hooks
+claude plugin validate --strict --profile directory plugins/claude/reminders
 claude plugin validate --strict .claude-plugin/marketplace.json
 ```
 

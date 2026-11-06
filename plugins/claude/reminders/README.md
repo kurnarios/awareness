@@ -1,4 +1,4 @@
-# Awareness hooks for Codex
+# Awareness reminders for Claude Code
 
 Requires Node.js 20+ on PATH. This plugin adds concise local time (with an explicit UTC offset) and token snapshots every ten minutes during activity per agent, or when context usage changes by ten percentage points, plus elapsed time for tool calls longer than five seconds. Turn elapsed time accompanies reports when its start is available in the transcript. Claude’s native cost-state amount is included when available; no cost is calculated. After compaction, a timestamp and reminder to re-read still-needed summarized resources are injected. All hooks run in the background. No network requests or runtime dependencies are used.
 
@@ -8,6 +8,8 @@ Set AWARENESS_STATE_DIR to change the default private state directory (~/.cache/
 
 Install from this repository’s marketplace:
 
-codex plugin add hooks@awareness
+/plugin install reminders@awareness
+
+Renamed from hooks@awareness in 0.4.0. Remove the old hooks plugin before installing reminders to avoid duplicate reports. The configuration file, environment variables, and reporting state are unchanged.
 
 MIT licensed.

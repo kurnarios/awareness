@@ -29,10 +29,10 @@ try {
   if (fs.existsSync(auth)) fs.symlinkSync(auth, path.join(home, 'auth.json'));
   const codexEnv = { CODEX_HOME: home, AWARENESS_STATE_DIR: path.join(root, 'codex-state') };
   await run('codex', ['plugin', 'marketplace', 'add', cwd, '--json'], codexEnv);
-  await run('codex', ['plugin', 'add', 'hooks@awareness', '--json'], codexEnv);
+  await run('codex', ['plugin', 'add', 'reminders@awareness', '--json'], codexEnv);
   const [codex, claude] = await Promise.allSettled([
     run('codex', ['exec', '--skip-git-repo-check', '--dangerously-bypass-hook-trust', '-s', 'read-only', '-m', 'gpt-6.1-sol', prompt], codexEnv),
-    run('claude', ['-p', '--setting-sources', '', '--plugin-dir', path.join(cwd, 'plugins/claude/hooks'), '--allowedTools', 'Bash', '--tools', 'Bash', '--max-turns', '6', '--output-format', 'json', '--debug-file', path.join(root, 'claude.debug'), prompt], { AWARENESS_STATE_DIR: path.join(root, 'claude-state') }),
+    run('claude', ['-p', '--setting-sources', '', '--plugin-dir', path.join(cwd, 'plugins/claude/reminders'), '--allowedTools', 'Bash', '--tools', 'Bash', '--max-turns', '6', '--output-format', 'json', '--debug-file', path.join(root, 'claude.debug'), prompt], { AWARENESS_STATE_DIR: path.join(root, 'claude-state') }),
   ]);
   if (claude.status === 'fulfilled') {
     const result = JSON.parse(claude.value.trim()); claudeSession = result.session_id;
@@ -60,7 +60,7 @@ try {
     const transcript = path.join(config, 'projects', cwd.replace(/[^a-zA-Z0-9]/g, '-'), `${claudeSession}.jsonl`);
     const costState = fs.readFileSync(transcript, 'utf8').split('\n').flatMap(line => { try { const row = JSON.parse(line); return row.type === 'cost-state' ? [row] : []; } catch { return []; } }).at(-1);
     assert.ok(costState && Number.isFinite(costState.totalCostUSD), 'Claude did not supply native cost state');
-    const result = JSON.parse(await run('claude', ['-p', '--resume', claudeSession, '--setting-sources', '', '--plugin-dir', path.join(cwd, 'plugins/claude/hooks'), '--allowedTools', 'Bash', '--tools', 'Bash', '--max-turns', '6', '--output-format', 'json', '--debug-file', path.join(root, 'claude-resume.debug'), 'Run true in Bash once, then true in a separate Bash call. Then quote cost_usd exactly as received in awareness context. Do nothing else.'], { AWARENESS_STATE_DIR: path.join(root, 'claude-state') }));
+    const result = JSON.parse(await run('claude', ['-p', '--resume', claudeSession, '--setting-sources', '', '--plugin-dir', path.join(cwd, 'plugins/claude/reminders'), '--allowedTools', 'Bash', '--tools', 'Bash', '--max-turns', '6', '--output-format', 'json', '--debug-file', path.join(root, 'claude-resume.debug'), 'Run true in Bash once, then true in a separate Bash call. Then quote cost_usd exactly as received in awareness context. Do nothing else.'], { AWARENESS_STATE_DIR: path.join(root, 'claude-state') }));
     const costContexts = fs.readFileSync(path.join(root, 'claude-resume.debug'), 'utf8').split('\n').flatMap(line => {
       const match = line.match(/Creating attachment for .*?: (\{.*\})$/);
       try { const text = match && JSON.parse(match[1]).hookSpecificOutput?.additionalContext; return text?.includes('cost_usd=') ? [text] : []; } catch { return []; }

@@ -4,14 +4,20 @@
     "name": "kurnarios"
   },
   "metadata": {
-    "description": "Minimal time, token, and execution awareness hooks."
+    "description": "Agent reminders and idle self-checks."
   },
   "plugins": [
     {
-      "name": "hooks",
-      "source": "./plugins/claude/hooks",
+      "name": "reminders",
+      "source": "./plugins/claude/reminders",
       "description": "Quiet time, token, and execution awareness.",
-      "version": "0.3.1"
+      "version": "0.4.0"
+    },
+    {
+      "name": "watchdog",
+      "source": "./plugins/claude/watchdog",
+      "description": "An idle self-check reminder, never approval or interruption.",
+      "version": "0.4.0"
     }
   ]
 }

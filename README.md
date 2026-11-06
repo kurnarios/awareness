@@ -6,7 +6,7 @@
 
 A coding agent can spend minutes working without clear signals about elapsed time, tool duration, or its remaining context. Without those signals, it is harder to notice expensive steps, manage context, or recover information lost during compaction.
 
-Awareness gives the agent short, timely updates so it can make better decisions about its work. It supplies time, context usage, token counts, slow-tool and turn durations, and native cost when available. After compaction, it reminds the agent to re-read still-needed content that was compacted/summarized.
+The `reminders` plugin gives the agent short, timely updates so it can make better decisions about its work. It supplies time, context usage, token counts, slow-tool and turn durations, and native cost when available. After compaction, it reminds the agent to re-read still-needed content that was compacted/summarized.
 
 ```text
 Beware: 2026-11-04T21:52:54-05:00 used_context=37% in=3.7M out=97.9K cached=3.4M
@@ -14,27 +14,61 @@ Beware: 2026-11-04T21:52:54-05:00 used_context=37% in=3.7M out=97.9K cached=3.4M
 
 Snapshot and compaction timestamps use the machine's local timezone with an explicit UTC offset, including daylight saving time (for example, `-05:00` or `-04:00`).
 
+The separate **watchdog** plugin queues an automatic self-check after an agent finishes a turn and stays idle, covering missed background callbacks and unexplained stops. It never interrupts work or grants approval. Its implementation is fixture-tested; live wake-up and child receipt remain to be checked. See [Watchdog behavior and timeout/message settings](docs/watchdog.md) and the [cooperative ten-second manual check](docs/watchdog-manual-check.md).
+
 ## Install
 
-Requires **Node.js 20+** on PATH. Install the `hooks` plugin from the `awareness` marketplace for your CLI:
+Requires **Node.js 20+** on PATH. Install the `reminders` plugin from the `awareness` marketplace for your CLI:
 
 **Codex**
 
 ```sh
 codex plugin marketplace add kurnarios/awareness
-codex plugin add hooks@awareness
+codex plugin add reminders@awareness
 ```
 
 **Claude Code**
 
 ```sh
 claude plugin marketplace add kurnarios/awareness --scope user
-claude plugin install hooks@awareness --scope user
+claude plugin install reminders@awareness --scope user
 ```
 
 Restart existing CLI sessions. In Codex, review and trust the hooks through `/hooks`. Both plugins then load automatically in new sessions. For project-only Claude installation, use `--scope project` on both commands.
 
-## Configuration and severity
+To also enable idle self-checks, install the separate plugin:
+
+```sh
+codex plugin add watchdog@awareness
+# Or, for Claude Code:
+claude plugin install watchdog@awareness --scope user
+```
+
+Watchdog uses native Claude modules (Claude Code 2.1.287+) and the existing local Codex daemon/queue (packaged against Codex 0.167.0). It does not support Codex `--no-daemon` or a remote server. Restart/reload the host and trust the Codex watchdog hooks as appropriate. Installing `reminders` alone does not enable it.
+
+## Upgrade from `hooks`
+
+Version 0.4.0 renames the plugin from `hooks` to `reminders`. This changes its installation identity; updating the old plugin does not rename it. Refresh the marketplace, remove the old installation, then install the new name:
+
+**Codex**
+
+```sh
+codex plugin marketplace upgrade awareness
+codex plugin remove hooks@awareness
+codex plugin add reminders@awareness
+```
+
+**Claude Code**
+
+```sh
+claude plugin marketplace update awareness
+claude plugin uninstall hooks@awareness --scope user
+claude plugin install reminders@awareness --scope user
+```
+
+Use the scope of your existing Claude installation. Restart the CLI and review the renamed Codex hooks through `/hooks`. Do not keep both names enabled: they would produce duplicate reports. Your `~/.config/awareness/config.json`, environment overrides, and reporting state continue to work.
+
+## Reminders configuration and severity
 
 Optional user configuration lives at `~/.config/awareness/config.json` on both hosts. Set `AWARENESS_CONFIG_FILE` to use another file. Use the complete default configuration below, also available as [config.example.json](docs/config.example.json), or supply only the keys you want to change. No profile files are created automatically. Unknown keys and invalid values are ignored; missing or malformed files use defaults.
 
@@ -185,11 +219,21 @@ Beware: compacted=2026-11-05T22:12:07-05:00
 Re-read still-needed files, goals, plans, protocols, specs, etc. whose original content was compacted/summarized.
 ```
 
+## Watchdog configuration
+
+Watchdog reads the same optional `~/.config/awareness/config.json`, or `AWARENESS_CONFIG_FILE`, and uses its own `watchdog` section. Merge overrides into an existing file rather than replacing reminders settings. For example, this sets a ten-second idle timeout while retaining the default message:
+
+```json
+{ "watchdog": { "timeoutMs": 10000 } }
+```
+
+The default is five minutes (`300000` ms). `watchdog.message` overrides the self-check body; either setting can be supplied independently. A fixed automatic/non-approval envelope is always included. See the [complete defaults](docs/watchdog.config.example.json), [implementation and limits](docs/watchdog.md), and [manual test](docs/watchdog-manual-check.md). Ordinary task completion may receive one self-check; the agent decides whether already-authorized work remains. Watchdog's own reply does not trigger another reminder.
+
 ## Report an issue
 
 [Open an issue](https://github.com/kurnarios/awareness/issues/new) if a signal is missing, incorrect, too frequent, or useful in an unexpected way. Include your CLI version, OS, the report received, and what you expected.
 
-## How it stays quiet
+## How reminders stay quiet
 
 - Checks every tool call; reports context after a **10-percentage-point change** from the previous report or **10 minutes** of activity.
 - Reports tool durations only above **5 seconds**. Adds turn time and CLI-supplied cost when available.
@@ -200,6 +244,6 @@ Unavailable fields are omitted. Codex token counts are cumulative thread totals;
 
 [Manual check guide](docs/manual-check.md) · [Behavior and limits](docs/reference.md) · [Verification](docs/verification.md) · [Implementation comparison](docs/comparison.md)
 
-MIT licensed. One dependency-free handler is packaged for both CLIs. For development, run `npm test` and `npm run check`; edit `scripts/awareness.mjs` and run `npm run build` to update the plugin copies.
+MIT licensed. Reminders uses one dependency-free handler packaged for both CLIs; Watchdog has separate native-host adapters and no runtime dependencies. For development, run `npm test` and `npm run check`; edit `scripts/awareness.mjs` and run `npm run build` to update the plugin copies.
 
 GitHub Actions runs tests, generated-file checks, and benchmarks on Linux and macOS with one Node.js LTS version (26) in the matrix for every push and pull request. A separate job uses the same Node version to validate both marketplace formats with pinned Codex and Claude CLIs, using a temporary Codex profile. CI does not run live model tests or require model credentials.

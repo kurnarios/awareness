@@ -9,7 +9,7 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'awareness-compact-'));
 const cwd = process.cwd();
 const config = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
 const debug = path.join(root, 'claude.debug');
-const child = spawn('claude', ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--setting-sources', '', '--plugin-dir', path.join(cwd, 'plugins/claude/hooks'), '--allowedTools', 'Bash', '--tools', 'Bash', '--max-turns', '8', '--debug-file', debug], { env: { ...process.env, AWARENESS_STATE_DIR: path.join(root, 'state') }, stdio: ['pipe', 'pipe', 'pipe'] });
+const child = spawn('claude', ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--setting-sources', '', '--plugin-dir', path.join(cwd, 'plugins/claude/reminders'), '--allowedTools', 'Bash', '--tools', 'Bash', '--max-turns', '8', '--debug-file', debug], { env: { ...process.env, AWARENESS_STATE_DIR: path.join(root, 'state') }, stdio: ['pipe', 'pipe', 'pipe'] });
 let session, waiting, stderr = '';
 const results = [];
 child.stderr.on('data', b => stderr += b);

@@ -1,13 +1,13 @@
 {
-  "name": "hooks",
-  "version": "0.3.1",
+  "name": "reminders",
+  "version": "0.4.0",
   "description": "Quiet time, context, token, and execution awareness.",
   "author": {
     "name": "kurnarios"
   },
   "license": "MIT",
   "interface": {
-    "displayName": "Awareness hooks",
+    "displayName": "Awareness reminders",
     "shortDescription": "Quiet time, context, token, and execution awareness.",
     "brandColor": "#2DD4BF",
     "composerIcon": "./assets/icon.png",

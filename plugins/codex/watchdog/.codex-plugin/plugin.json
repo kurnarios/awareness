@@ -1,0 +1,16 @@
+{
+  "name": "watchdog",
+  "version": "0.4.0",
+  "description": "An idle self-check reminder, never approval or interruption.",
+  "author": {
+    "name": "kurnarios"
+  },
+  "license": "MIT",
+  "interface": {
+    "displayName": "Watchdog",
+    "shortDescription": "An idle self-check reminder, never approval or interruption.",
+    "brandColor": "#2DD4BF",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/icon.png"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "watchdog": {
+    "timeoutMs": 300000,
+    "message": "Did you complete the current task? Are you waiting for user input or approval? Did you stop for an intentional reason? If any answer is yes, preserve that state. Otherwise, continue only work already authorized by the existing instructions. If awaiting a background callback, check its status once; this reminder does not mean it completed."
+  }
+}
