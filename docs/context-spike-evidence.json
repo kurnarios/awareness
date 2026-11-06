@@ -1,0 +1,49 @@
+{
+  "date": "2026-11-05",
+  "host": "codex",
+  "cli": "codex-cli 0.166.0",
+  "pluginVersion": "0.3.0",
+  "scope": "Resumed parent session after user updated plugin and restarted Codex; explicitly requested synthetic context spike.",
+  "input": {
+    "words": 100000,
+    "bytes": 400000,
+    "content": "Short random repeated words; seeded generator.",
+    "initialRead": "Tool response was truncated.",
+    "completedRead": "Ten consecutive non-overlapping 100-line chunks, each returning 10,000 words without truncation."
+  },
+  "received": [
+    "Beware: 2026-11-05T17:39:59Z used_context=8% in=1.8M out=15.3K cached=1.7M",
+    "Beware: 2026-11-05T17:41:58Z used_context=18% in=2.9M out=18.4K cached=2.7M"
+  ],
+  "result": "Received a context-change report 10 percentage points above the baseline, before the final chunk was read.",
+  "audit": "Not audited against native generation-time counters in this run.",
+  "limits": [
+    "Synthetic growth, not an ordinary-work observation.",
+    "Chunking spread growth over multiple observations; the 20-percentage-point single-step critical alert was not tested.",
+    "No live evidence for context severity at 50/65/85%, slow-tool severities, input/cached severities, or Claude behavior.",
+    "Last received percentage is a report-time observation, not a measurement after the final read."
+  ],
+  "cleanup": "Removed the generated temporary word file and its empty test directory. Personal settings and reporting state were unchanged.",
+  "continuation": {
+    "requestedScope": "Ten additional 10,000-word chunks (100,000 additional words total), as stated before reading.",
+    "input": {
+      "words": 100000,
+      "chunks": 10,
+      "wordsPerChunk": 10000,
+      "truncated": false,
+      "generatorSeed": 20261106
+    },
+    "received": [
+      "Beware: 2026-11-05T18:03:58Z used_context=22% in=3.7M out=20.7K cached=3.5M\nturn=00:00:26",
+      "Beware: 2026-11-05T18:04:29Z used_context=28% in=5M out=21.4K cached=4.8M\nwarning: input: Too verbose: reduce reading and tool calls.\nturn=00:00:57"
+    ],
+    "result": "Received input severity warning during chunked reads. Reported context rose from 22% to 28%; the warning is another legitimate snapshot trigger below a 10-point context change.",
+    "limits": [
+      "Received context only; native generation-time counters have not been audited.",
+      "Rounded in=5M does not establish the exact native token count.",
+      "The 28% report arrived before the final three chunks; final occupancy is not measured here.",
+      "Single-step critical jumps and higher severities remain untested live."
+    ],
+    "cleanup": "Removed this batch temporary word file, empty directory, and path pointer. No personal settings or reporting state changed."
+  }
+}

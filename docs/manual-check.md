@@ -10,7 +10,7 @@ A documentation request alone does not authorize starting another live test. A l
 
 ## 1. Establish the scope
 
-Record the CLI and plugin versions, selected model, installation source, and whether this is the parent session or a subagent. Check that the plugin is enabled; Codex hooks must be trusted. Restart existing sessions after an update before testing that version.
+Record the CLI and plugin versions, selected model, installation source, and whether this is the parent session or a subagent. Check that the plugin is enabled; Codex hooks must be trusted. Before testing a new release, confirm its version was bumped, update the installed plugin, restart Codex, and resume the session. Record the installed version; repository changes alone do not update a running installation. Do not silently mix versions within a run.
 
 Use the existing installation unless asked otherwise. Do not change personal settings, status lines, hook definitions, thresholds, clocks, or reporting state to make the test pass. Keep the installed version stable during the timed run.
 
@@ -100,6 +100,12 @@ Asynchronous delay is a measured limitation, not something to hide. In the recor
 - **Context changes:** observe natural increases/decreases. Check every post-tool event, with a report at a change of at least ten percentage points from the previous reported percentage. Do not adopt every-N-calls sampling or fill the context merely to reach the threshold. If no natural crossing occurs, mark this live case untested and cite fixture coverage separately.
 - **Compaction:** use the CLI's actual `/compact` command. Never create large synthetic prompts or lower automatic-compaction limits to force it. Verify the timestamp and the exact reminder: `Re-read still-needed files, goals, plans, protocols, specs, etc. whose original content was compacted/summarized.`
 - **Native cost:** observe a normal native cost update or resume. Do not add a status-line bridge or change the user's settings without explicit permission.
+
+## Explicit synthetic spike checks
+
+Only when the user explicitly requests a synthetic spike test, generate a temporary file of short repeated words and read it through the normal tool interface. This is an exception to the ordinary-work procedure above, not evidence of natural context growth. Record the requested word count and whether the tool returned the entire file or truncated it. A file containing 100,000 words does not guarantee that 100,000 words entered model context: tool output limits may truncate it. Do not change personal configuration, reporting state, clocks, or context capacity to force a result.
+
+Quote only actual injected messages. Asynchronous hooks can observe native usage before the large tool result is counted; absence of an immediate report is inconclusive. Allow delivery at a subsequent conversation boundary rather than repeatedly issuing calls to provoke a report. Compare any report with its own native generation-time counters in a later read-only audit. Do not equate word count with token count or assume the read crosses the configured percentage-point threshold. Preserve or remove the temporary file as agreed with the user.
 
 ## 8. Record the result and clean up
 

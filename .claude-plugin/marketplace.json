@@ -11,7 +11,7 @@
       "name": "hooks",
       "source": "./plugins/claude/hooks",
       "description": "Quiet time, token, and execution awareness.",
-      "version": "0.3.0"
+      "version": "0.3.1"
     }
   ]
 }

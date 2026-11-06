@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { defaults, loadConfig, handle } from '../scripts/awareness.mjs';
+import { defaults, loadConfig, handle, formatTimestamp } from '../scripts/awareness.mjs';
 
 const levels = ['warning', 'error', 'critical'];
 function fixture(t, config = {}, host = 'codex') {
@@ -32,6 +32,10 @@ const guidance = result => (context(result) || '').split('\n').filter(line => /^
 
 test('documented complete defaults match runtime defaults', () => {
   assert.deepEqual(JSON.parse(fs.readFileSync(new URL('../docs/config.example.json', import.meta.url))), defaults);
+  const readme = fs.readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+  const config = readme.match(/```json\n([\s\S]*?)\n```/);
+  assert.ok(config, 'README includes the complete default configuration');
+  assert.deepEqual(JSON.parse(config[1]), defaults);
 });
 
 test('all default and custom severity thresholds select only the highest reached level', t => {
@@ -196,7 +200,7 @@ test('all configurable guidance messages and prefix reach emitted context', t =>
   assert.match(jumps, /critical: context_jump=20pp: custom context jump/);
   assert.match(jumps, /critical: input_jump=500K: custom input jump/);
   assert.equal(f.run(0, { hook_event_name: 'PostCompact' }), undefined);
-  assert.equal(context(f.run(0, { hook_event_name: 'SessionStart', source: 'compact' })), 'Custom: compacted=1970-01-01T00:16:40Z\ncustom reload');
+  assert.equal(context(f.run(0, { hook_event_name: 'SessionStart', source: 'compact' })), `Custom: compacted=${formatTimestamp(1000000)}\ncustom reload`);
 });
 
 test('configuration validates each numeric scalar, threshold array, and message independently', t => {

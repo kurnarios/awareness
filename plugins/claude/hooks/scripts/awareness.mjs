@@ -69,6 +69,13 @@ function severity(value, thresholds) {
 const TAIL = 1024 * 1024;
 const hash = value => crypto.createHash('sha256').update(value).digest('hex').slice(0, 32);
 const number = value => Number.isFinite(value) && value >= 0 ? value : undefined;
+export function formatTimestamp(now) {
+  const offset = new Date(now).getTimezoneOffset();
+  const local = new Date(now - offset * 60000).toISOString().slice(0, 19);
+  const magnitude = Math.abs(offset);
+  const zone = [Math.floor(magnitude / 60), magnitude % 60].map(n => String(n).padStart(2, '0')).join(':');
+  return `${local}${offset > 0 ? '-' : '+'}${zone}`;
+}
 export function formatTokens(value) {
   if (number(value) === undefined) return undefined;
   const units = ['', 'K', 'M', 'B', 'T'];
@@ -261,7 +268,7 @@ export function handle(p, { host = 'codex', env = process.env, now = Date.now() 
   }
   if (event === 'SessionStart' && p.source === 'compact') {
     return { hookSpecificOutput: { hookEventName: event, additionalContext:
-      `${config.prefix}: compacted=${new Date(now).toISOString().replace(/\.\d{3}Z$/, 'Z')}\n${config.messages.postCompaction}` } };
+      `${config.prefix}: compacted=${formatTimestamp(now)}\n${config.messages.postCompaction}` } };
   }
   const stateFile = path.join(dir, 'snapshot.json');
   const parts = [];
@@ -313,7 +320,7 @@ export function handle(p, { host = 'codex', env = process.env, now = Date.now() 
     }
     const next = { ...state, observedPercent: percent ?? state.observedPercent, observedInput: u.input ?? state.observedInput, levels: currentLevels };
     if (!Number.isFinite(state.at) || now - state.at >= config.intervalMs || firstUsage || firstCost || changed || crossed || jumps.length) {
-      const fields = [new Date(now).toISOString().replace(/\.\d{3}Z$/, 'Z')];
+      const fields = [formatTimestamp(now)];
       if (percent !== undefined) fields.push(`used_context=${Math.floor(percent)}%`);
       for (const [key, value] of [['in', u.input], ['out', u.output], ['cached', u.cached]]) {
         if (number(value) !== undefined) fields.push(`${key}=${formatTokens(value)}`);

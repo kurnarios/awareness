@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Node ${{ matrix.node }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node: [20, 22, 24, 26]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          package-manager-cache: false
+      # The project has no runtime or development dependencies to install.
+      - name: Test handler and documented defaults
+        run: npm test
+      - name: Check generated plugins and manifests
+        run: npm run check
+      - name: Benchmark hook processes
+        run: npm run benchmark
+
+  packaging:
+    name: Validate Codex and Claude packaging
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Install validation CLIs
+        run: npm install --global @openai/codex@0.167.0 @anthropic-ai/claude-code@2.1.318
+      - name: Validate Claude plugin and marketplace
+        run: |
+          claude plugin validate --strict --profile directory plugins/claude/hooks
+          claude plugin validate --strict .claude-plugin/marketplace.json
+      - name: Validate Codex marketplace and installation in a temporary profile
+        shell: bash
+        run: |
+          profile_dir=$(mktemp -d)
+          trap 'rm -rf "$profile_dir"' EXIT
+          export CODEX_HOME="$profile_dir"
+          codex plugin marketplace add "$GITHUB_WORKSPACE" --json
+          codex plugin add hooks@awareness --json

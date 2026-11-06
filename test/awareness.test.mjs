@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
-import { handle, elapsed, usage, toolDuration, turnElapsed, modelCapacity, nativeCost, formatTokens } from '../scripts/awareness.mjs';
+import { spawn, spawnSync } from 'node:child_process';
+import { handle, elapsed, usage, toolDuration, turnElapsed, modelCapacity, nativeCost, formatTokens, formatTimestamp } from '../scripts/awareness.mjs';
 function fixture(t, host = 'claude') {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'awareness-test-'));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
@@ -19,7 +19,7 @@ function fixture(t, host = 'claude') {
 const context = output => output?.hookSpecificOutput.additionalContext;
 test('snapshot only once per ten minutes, including resume and clock rollback', t => {
   const { run } = fixture(t);
-  assert.match(context(run()), /^Beware: \d{4}-.*Z$/);
+  assert.match(context(run()), /^Beware: \d{4}-.*[+-]\d{2}:\d{2}$/);
   assert.equal(run(), undefined);
   assert.equal(run({}, -1000), undefined);
   assert.equal(run({}, 599999), undefined);
@@ -196,9 +196,28 @@ test('compaction notice bypasses statistics throttling and adds no control decis
     const result = run({ hook_event_name: 'SessionStart', source: 'compact' }, 1001);
     assert.deepEqual(Object.keys(result), ['hookSpecificOutput']);
     assert.equal(result.hookSpecificOutput.hookEventName, 'SessionStart');
-    assert.match(context(result), /^Beware: compacted=\d{4}-.*Z\nRe-read still-needed files, goals, plans, protocols, specs, etc\. whose original content was compacted\/summarized\.$/);
-    assert.ok(context(result).includes(new Date(now + 1001).toISOString().replace(/\.\d{3}Z$/, 'Z')));
+    assert.match(context(result), /^Beware: compacted=\d{4}-.*[+-]\d{2}:\d{2}\nRe-read still-needed files, goals, plans, protocols, specs, etc\. whose original content was compacted\/summarized\.$/);
+    assert.ok(context(result).includes(formatTimestamp(now + 1001)));
     assert.equal(run({}, 1002), undefined);
+  }
+});
+
+test('timestamps use local dates and explicit offsets across DST, UTC, and fractional zones', () => {
+  const instants = ['2026-01-15T02:40:07.999Z', '2026-07-15T02:40:07.999Z', '2026-11-01T05:30:00Z', '2026-11-01T06:30:00Z'];
+  const cases = {
+    'America/New_York': ['2026-01-14T21:40:07-05:00', '2026-07-14T22:40:07-04:00', '2026-11-01T01:30:00-04:00', '2026-11-01T01:30:00-05:00'],
+    'Asia/Kolkata': ['2026-01-15T08:10:07+05:30', '2026-07-15T08:10:07+05:30', '2026-11-01T11:00:00+05:30', '2026-11-01T12:00:00+05:30'],
+    'America/St_Johns': ['2026-01-14T23:10:07-03:30', '2026-07-15T00:10:07-02:30', '2026-11-01T02:00:00-03:30', '2026-11-01T03:00:00-03:30'],
+    UTC: instants.map(value => value.slice(0, 19) + '+00:00'),
+  };
+  for (const [TZ, expected] of Object.entries(cases)) {
+    const script = `import { formatTimestamp } from ${JSON.stringify(new URL('../scripts/awareness.mjs', import.meta.url).href)};
+      console.log(JSON.stringify(${JSON.stringify(instants)}.map(value => formatTimestamp(Date.parse(value)))));`;
+    const result = spawnSync(process.execPath, ['--input-type=module', '-e', script], { env: { ...process.env, TZ }, encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    const actual = JSON.parse(result.stdout);
+    assert.deepEqual(actual, expected, TZ);
+    actual.forEach((value, i) => assert.equal(Date.parse(value), Math.floor(Date.parse(instants[i]) / 1000) * 1000));
   }
 });
 
