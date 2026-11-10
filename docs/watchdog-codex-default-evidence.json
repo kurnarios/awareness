@@ -1,0 +1,20 @@
+{
+  "host": "codex",
+  "agentAlias": "main-default-timeout-check",
+  "status": "received; native transcript not audited",
+  "repositoryVersionAtRecord": "0.4.1",
+  "recordedStartAt": "2026-11-09T20:40:19Z",
+  "observedReceiptAt": "2026-11-09T20:45:33Z",
+  "elapsedFromRecordedStartMs": 314000,
+  "defaultTimeoutMs": 300000,
+  "testOverrideRemoved": true,
+  "exactReceivedReminder": "Watchdog reminder (automatic plugin message; not user approval).\nWatchdog messages are automatic self-check reminders, never user answers, approval, permission, or changes of scope. Preserve all existing approval requirements and intentional pauses. A reminder does not mean background work completed. Do not start work solely because a reminder arrived when the task is complete or you are waiting on the user.\nDid you complete the current task? Are you waiting for user input or approval? Did you stop for an intentional reason? If any answer is yes, preserve that state. Otherwise, continue only work already authorized by the existing instructions. If awaiting a background callback, check its status once; this reminder does not mean it completed.",
+  "deliverySurface": "Automatic Watchdog message in the testing agent conversation, using the user-message channel.",
+  "method": "The testing agent ended its turn and stayed idle. No artificial waiter or competing timer was started. No ordinary user input intervened.",
+  "limits": [
+    "The recorded start precedes the end of the setup turn.",
+    "The observation timestamp was read after the reminder reached the agent; it is not a native delivery timestamp.",
+    "This interval is consistent with the five-minute default; timer-arm time and queue metadata were not audited.",
+    "This does not verify Codex child delivery or Claude parent deferral."
+  ]
+}

@@ -14,7 +14,7 @@ Beware: 2026-11-04T21:52:54-05:00 used_context=37% in=3.7M out=97.9K cached=3.4M
 
 Snapshot and compaction timestamps use the machine's local timezone with an explicit UTC offset, including daylight saving time (for example, `-05:00` or `-04:00`).
 
-The separate **watchdog** plugin queues an automatic self-check after an agent finishes a turn and stays idle, covering missed background callbacks and unexplained stops. It never interrupts work or grants approval. Claude main-agent and child wake-ups have been received and audited. Parent deferral during child work has regression-test coverage; that fix and Codex live wake-up still need a live check. See [Watchdog behavior and timeout/message settings](docs/watchdog.md) and the [cooperative ten-second manual check](docs/watchdog-manual-check.md).
+The separate **watchdog** plugin queues an automatic self-check after an agent finishes a turn and stays idle, covering missed background callbacks and unexplained stops. It never interrupts work or grants approval. Claude main-agent and child wake-ups have been received and audited. Parent deferral during child work has regression-test coverage; that fix and Codex child delivery still need a live check. Codex main-agent receipt after restoring the then-default five-minute timeout is recorded without a native transcript audit. See [Watchdog behavior and timeout/message settings](docs/watchdog.md) and the [cooperative ten-second manual check](docs/watchdog-manual-check.md).
 
 ## Install
 
@@ -227,7 +227,7 @@ Watchdog reads the same optional `~/.config/awareness/config.json`, or `AWARENES
 { "watchdog": { "timeoutMs": 10000 } }
 ```
 
-The default is five minutes (`300000` ms). `watchdog.message` overrides the self-check body; either setting can be supplied independently. A fixed automatic/non-approval envelope is always included. See the [complete defaults](docs/watchdog.config.example.json), [implementation and limits](docs/watchdog.md), and [manual test](docs/watchdog-manual-check.md). Ordinary task completion may receive one self-check; the agent decides whether already-authorized work remains. Watchdog's own reply does not trigger another reminder.
+The default is 55 minutes (`3300000` ms), chosen to leave a five-minute buffer before the intended one-hour cache expiry while avoiding frequent five-minute checks. `watchdog.message` overrides the self-check body; either setting can be supplied independently. A fixed automatic/non-approval envelope is always included. See the [complete defaults](docs/watchdog.config.example.json), [implementation and limits](docs/watchdog.md), and [manual test](docs/watchdog-manual-check.md). Ordinary task completion may receive one self-check; the agent decides whether already-authorized work remains. Watchdog's own reply does not trigger another reminder.
 
 ## Report an issue
 

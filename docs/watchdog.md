@@ -1,6 +1,6 @@
 # Watchdog: idle-agent reminders
 
-Status: implemented since version 0.4.0 as a separate plugin for each CLI. Claude main-agent and child receipts have now been collected and audited against native transcripts; see [live evidence](watchdog-claude-live-evidence.json). Version 0.4.1 fixes parent eligibility during real child activity. That fix has fixture coverage and still needs its live regression check. Codex live wake-up remains unverified. No live test is started merely by documenting the plugin.
+Status: implemented since version 0.4.0 as a separate plugin for each CLI. Claude main-agent and child receipts have now been collected and audited against native transcripts; see [live evidence](watchdog-claude-live-evidence.json). Version 0.4.1 fixes parent eligibility during real child activity. That fix has fixture coverage and still needs its live regression check. Codex main-agent receipt after restoring the then-default five-minute timeout is recorded without a native transcript audit; Codex child delivery remains unverified. No live test is started merely by documenting the plugin.
 
 ## What and why
 
@@ -27,13 +27,13 @@ Complete watchdog defaults, also in [watchdog.config.example.json](watchdog.conf
 ```json
 {
   "watchdog": {
-    "timeoutMs": 300000,
+    "timeoutMs": 3300000,
     "message": "Did you complete the current task? Are you waiting for user input or approval? Did you stop for an intentional reason? If any answer is yes, preserve that state. Otherwise, continue only work already authorized by the existing instructions. If awaiting a background callback, check its status once; this reminder does not mean it completed."
   }
 }
 ```
 
-`timeoutMs` is the eligible idle duration before a self-check, in milliseconds. The default is five minutes. It is not a limit on tool execution, model reasoning, or the lifetime of background work. `message` is the configurable self-check text, not a command to approve or resume everything.
+`timeoutMs` is the eligible idle duration before a self-check, in milliseconds. Since version 0.4.2, the default is 55 minutes, chosen to leave a five-minute buffer before the intended one-hour cache expiry while avoiding frequent five-minute checks. It is not a limit on tool execution, model reasoning, or the lifetime of background work. `message` is the configurable self-check text, not a command to approve or resume everything.
 
 Only the keys supplied by the user override defaults. For example, this changes the delay to ten minutes and retains the default message:
 
@@ -106,11 +106,13 @@ Watchdog does not poll JSONL growth. Claude uses native turn events. Codex watch
 | Codex ordinary `async` command hook | Informational output does not start a new idle turn. | Used for short observational startup/activity handling, not as the wake-up channel. |
 | Codex native queue | Text can be queued for an existing thread. | Implemented local-daemon delivery path, with a second idle check before starting our own queued item. |
 
-The relevant contracts are documented in [Claude background hooks](https://code.claude.com/docs/en/hooks#limitations), the [Claude mods API](https://code.claude.com/docs/en/plugins/mods/api), [Codex background hooks](https://learn.chatgpt.com/docs/hooks#how-background-hooks-run), and [Codex queue commands](https://learn.chatgpt.com/docs/cli/reference#codex-queue). The installed Codex 0.167.0 schemas also establish separate queue add/list/delete/start methods. Codex queue wake-up still needs live observation; protocol availability is not receipt evidence. Claude plugin calls have received-context evidence below.
+The relevant contracts are documented in [Claude background hooks](https://code.claude.com/docs/en/hooks#limitations), the [Claude mods API](https://code.claude.com/docs/en/plugins/mods/api), [Codex background hooks](https://learn.chatgpt.com/docs/hooks#how-background-hooks-run), and [Codex queue commands](https://learn.chatgpt.com/docs/cli/reference#codex-queue). The installed Codex 0.167.0 schemas also establish separate queue add/list/delete/start methods. Codex main-agent receipt is recorded separately below; child delivery still needs live observation. Protocol availability alone is not receipt evidence. Claude plugin calls have received-context evidence below.
 
 For an existing daemon, its environment may differ from the terminal that later launched a client. A newly exported `AWARENESS_CONFIG_FILE` in that terminal does not establish which path the daemon's hooks read. Read effective configuration from the agent's execution environment before testing. The manual check sets only `watchdog.timeoutMs` to 10000 and tells the cooperating agent what to expect; it does not manipulate clocks or require the agent to resist its normal behavior.
 
 ## Evidence and acceptance criteria
+
+The [Codex default-timeout receipt](watchdog-codex-default-evidence.json) records an automatic reminder received in the testing agent's own conversation after the temporary ten-second configuration file was removed. The setup timestamp was 20:40:19 UTC on November 9, 2026; receipt was observed at 20:45:33 UTC, an interval of 314 seconds. This is consistent with the then-default five-minute timeout, including turn-end and observation overhead. It is received evidence, not a native transcript/queue audit, and does not establish exact timer-arm timing or child delivery.
 
 The design research established available CLI commands, generated Codex queue schemas, and documented Claude wake-up/timer APIs. A read-only probe connected to an existing Codex daemon and identified the current active thread; that thread reported source `vscode`. This was not standalone CLI wake-up evidence. That probe queued no watchdog reminder. Implementation fixtures exercise delivery against fake native APIs and a local protocol server. Subsequent Claude main/child model receipts are audited separately below; they do not establish Codex receipt or the 0.4.1 parent-deferral fix.
 

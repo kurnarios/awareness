@@ -13,7 +13,7 @@ Before inventing paths, environment variables, or keys, read the existing loader
 - Shared optional file: `~/.config/awareness/config.json`.
 - Existing override: `AWARENESS_CONFIG_FILE`.
 - Keys: `watchdog.timeoutMs` and `watchdog.message`. Durations are milliseconds.
-- The default timeout is 300000. An absent profile file is valid; the plugin does not create one.
+- The default timeout is 3300000 (55 minutes). An absent profile file is valid; the plugin does not create one.
 
 Read the active file, if present, and inspect the effective settings from the agent's environment before the idle part of the test. In this repository, the read-only command is:
 

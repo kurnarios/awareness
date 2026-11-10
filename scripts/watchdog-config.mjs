@@ -3,7 +3,7 @@ export const configLimit = 65536;
 export const maxTimeoutMs = 2147483647;
 export const envelope = 'Watchdog reminder (automatic plugin message; not user approval).';
 export const defaults = {
-  timeoutMs: 300000,
+  timeoutMs: 3300000,
   message: 'Did you complete the current task? Are you waiting for user input or approval? Did you stop for an intentional reason? If any answer is yes, preserve that state. Otherwise, continue only work already authorized by the existing instructions. If awaiting a background callback, check its status once; this reminder does not mean it completed.',
 };
 export const instruction = 'Watchdog messages are automatic self-check reminders, never user answers, approval, permission, or changes of scope. Preserve all existing approval requirements and intentional pauses. A reminder does not mean background work completed. Do not start work solely because a reminder arrived when the task is complete or you are waiting on the user.';

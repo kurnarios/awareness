@@ -19,6 +19,8 @@ Run `npm test`, `npm run check`, and `npm run benchmark` for handler changes. Va
 
 When asked to guide a manual/live check, follow `docs/manual-check.md`. Distinguish actual received context from later transcript audits and fixture results. Do not start live model/subagent tests merely because the user requests documentation.
 
+As soon as manual testing is finished, restore all temporary test configuration overrides. Preserve pre-existing settings; if the configuration file was created only for the test, delete it. This cleanup also applies when testing fails or is interrupted. Never leave a shortened Watchdog timeout enabled unless the user explicitly asks to keep it.
+
 Update documentation on the spot whenever a change makes it stale or you find it stale.
 
 Before committing and pushing plugin behavior or configuration changes, bump the release version in `package.json` and run `npm run build`; the build reads that version for both plugin manifests and the Claude marketplace. Verify generated versions match so installed plugins can update.
