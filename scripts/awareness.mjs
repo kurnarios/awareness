@@ -8,6 +8,7 @@ import { pathToFileURL } from 'node:url';
 
 export const defaults = {
   prefix: 'Beware',
+  infoPrefix: 'JFYI',
   intervalMs: 600000,
   contextChangePoints: 10,
   toolReportMs: 5000,
@@ -268,10 +269,11 @@ export function handle(p, { host = 'codex', env = process.env, now = Date.now() 
   }
   if (event === 'SessionStart' && p.source === 'compact') {
     return { hookSpecificOutput: { hookEventName: event, additionalContext:
-      `${config.prefix}: compacted=${formatTimestamp(now)}\n${config.messages.postCompaction}` } };
+      `${config.infoPrefix}: compacted=${formatTimestamp(now)}\n${config.messages.postCompaction}` } };
   }
   const stateFile = path.join(dir, 'snapshot.json');
   const parts = [];
+  let hasSeverity = false;
   let records;
   const getRecords = () => records ??= tailRecords(transcript);
   if (event === 'PostToolUse' || event === 'PostToolUseFailure') {
@@ -284,7 +286,10 @@ export function handle(p, { host = 'codex', env = process.env, now = Date.now() 
         const name = String(p.tool_name || 'tool').replace(/[^\w.:-]/g, '_').slice(0, 64);
         parts.push(`tool=${name} elapsed=${elapsed(duration)}`);
         const level = severity(duration, config.thresholds.toolMs);
-        if (level >= 0) parts.push(`${levels[level]}: ${config.messages.tool[level]}`);
+        if (level >= 0) {
+          parts.push(`${levels[level]}: ${config.messages.tool[level]}`);
+          hasSeverity = true;
+        }
       } catch {}
     }
   }
@@ -320,12 +325,13 @@ export function handle(p, { host = 'codex', env = process.env, now = Date.now() 
     }
     const next = { ...state, observedPercent: percent ?? state.observedPercent, observedInput: u.input ?? state.observedInput, levels: currentLevels };
     if (!Number.isFinite(state.at) || now - state.at >= config.intervalMs || firstUsage || firstCost || changed || crossed || jumps.length) {
-      const fields = [formatTimestamp(now)];
+      const fields = [`current_time=${formatTimestamp(now)}`];
       if (percent !== undefined) fields.push(`used_context=${Math.floor(percent)}%`);
       for (const [key, value] of [['in', u.input], ['out', u.output], ['cached', u.cached]]) {
         if (number(value) !== undefined) fields.push(`${key}=${formatTokens(value)}`);
       }
       parts.push(fields.join(' '), ...alerts, ...jumps);
+      hasSeverity ||= alerts.length > 0 || jumps.length > 0;
       Object.assign(next, { at: now, hasUsage: state.hasUsage || hasUsage, percent: percent ?? state.percent, cost: cost ?? state.cost });
       for (const file of fs.readdirSync(dir).slice(0, 2048)) {
         if (!file.startsWith('tool-')) continue;
@@ -339,7 +345,8 @@ export function handle(p, { host = 'codex', env = process.env, now = Date.now() 
     if (turn !== undefined) parts.push(`turn=${elapsed(turn)}`);
     const cost = nativeCost(p, host, getRecords());
     if (cost !== undefined) parts.push(`cost_usd=${cost}`);
-    return { hookSpecificOutput: { hookEventName: event, additionalContext: `${config.prefix}: ${parts.join('\n')}` } };
+    const prefix = hasSeverity ? config.prefix : config.infoPrefix;
+    return { hookSpecificOutput: { hookEventName: event, additionalContext: `${prefix}: ${parts.join('\n')}` } };
   }
 }
 

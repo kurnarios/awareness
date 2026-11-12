@@ -52,6 +52,7 @@ test('all default and custom severity thresholds select only the highest reached
           if (key === 'toolMs') Object.assign(extra, { tool_use_id: extra.session_id, duration_ms: value });
           const out = f.run(0, extra);
           const messages = guidance(out);
+          assert.ok(context(out).startsWith(expected < 0 ? 'JFYI: ' : 'Beware: '));
           const messageKey = key === 'toolMs' ? 'tool' : key;
           assert.deepEqual(messages, expected < 0 ? [] : [
             `${levels[expected]}: ${key === 'toolMs' ? '' : `${key}: `}${defaults.messages[messageKey][expected]}`,
@@ -106,6 +107,7 @@ test('jumps use adjacent observations, exact absolute boundaries, and never down
     f.write({ percent, input }); assert.equal(f.run(), undefined);
     f.write({ percent: percent + contextJumpPoints, input: input + inputJump });
     const out = context(f.run());
+    assert.ok(out.startsWith('Beware: '));
     assert.match(out, /critical: context_jump=/);
     assert.match(out, /critical: input_jump=/);
     assert.equal(f.run(), undefined, 'jump is not repeated for the same observation');
@@ -129,9 +131,13 @@ test('severity guidance repeats on snapshots, resets after a drop, and crosses a
     f.write({ percent, input, cached });
     assert.equal(guidance(f.run()).filter(line => line.startsWith(`${level}:`)).length, 3);
     assert.equal(f.run(999), undefined);
-    assert.equal(guidance(f.run(1000)).filter(line => line.startsWith(`${level}:`)).length, 3);
+    const repeated = f.run(1000);
+    assert.match(context(repeated), /^Beware:/);
+    assert.equal(guidance(repeated).filter(line => line.startsWith(`${level}:`)).length, 3);
     f.write(); assert.equal(f.run(1000), undefined, 'drop alone does not trigger severity guidance');
-    assert.deepEqual(guidance(f.run(2000)), [], 'cleared levels do not repeat');
+    const cleared = f.run(2000);
+    assert.match(context(cleared), /^JFYI:/);
+    assert.deepEqual(guidance(cleared), [], 'cleared levels do not repeat');
     f.write({ percent, input, cached });
     assert.equal(guidance(f.run(2000)).filter(line => line.startsWith(`${level}:`)).length, 3);
   }
@@ -186,7 +192,8 @@ test('all configurable guidance messages and prefix reach emitted context', t =>
     tool: ['tool one', 'tool two', 'tool three'],
     contextJump: 'custom context jump', inputJump: 'custom input jump', postCompaction: 'custom reload',
   };
-  const f = fixture(t, { prefix: 'Custom', messages });
+  const f = fixture(t, { prefix: 'Custom', infoPrefix: 'Custom info', messages });
+  assert.match(context(f.run()), /^Custom info: current_time=/);
   for (let i = 0; i < 3; i++) {
     f.write({ percent: defaults.thresholds.context[i], input: defaults.thresholds.input[i], cached: defaults.thresholds.cached[i] });
     const out = context(f.run(0, { session_id: `level-${i}`, tool_use_id: `tool-${i}`, duration_ms: defaults.thresholds.toolMs[i] }));
@@ -200,7 +207,7 @@ test('all configurable guidance messages and prefix reach emitted context', t =>
   assert.match(jumps, /critical: context_jump=20pp: custom context jump/);
   assert.match(jumps, /critical: input_jump=500K: custom input jump/);
   assert.equal(f.run(0, { hook_event_name: 'PostCompact' }), undefined);
-  assert.equal(context(f.run(0, { hook_event_name: 'SessionStart', source: 'compact' })), `Custom: compacted=${formatTimestamp(1000000)}\ncustom reload`);
+  assert.equal(context(f.run(0, { hook_event_name: 'SessionStart', source: 'compact' })), `Custom info: compacted=${formatTimestamp(1000000)}\ncustom reload`);
 });
 
 test('configuration validates each numeric scalar, threshold array, and message independently', t => {
@@ -238,8 +245,10 @@ test('configuration validates each numeric scalar, threshold array, and message 
       assert.equal(loadConfig(f.env).messages[key], defaults.messages[key]);
     }
   }
-  for (const prefix of [null, false, 42, {}, []]) {
-    f.configure({ prefix }); assert.equal(loadConfig(f.env).prefix, defaults.prefix);
+  for (const key of ['prefix', 'infoPrefix']) {
+    for (const value of [null, false, 42, {}, []]) {
+      f.configure({ [key]: value }); assert.equal(loadConfig(f.env)[key], defaults[key]);
+    }
   }
   f.configure({ unknown: 1, capacity: 1, thresholds: { unknown: 2 }, messages: { unknown: 'x' } });
   assert.deepEqual(loadConfig(f.env), defaults, 'unknown settings cannot override native capacity');
@@ -310,7 +319,7 @@ test('configuration changes are reloaded on the next event without resetting pri
   assert.equal(f.run(), undefined);
   f.configure({ intervalMs: 1 });
   const out = context(f.run(1));
-  assert.ok(out.startsWith('Beware: '));
+  assert.ok(out.startsWith('JFYI: '));
   assert.deepEqual(guidance({ hookSpecificOutput: { additionalContext: out } }), []);
 });
 
@@ -343,4 +352,23 @@ test('nested non-object settings fall back, valid sibling overrides survive, and
   assert.equal(loadConfig(f.env).prefix, 'At limit');
   fs.appendFileSync(f.env.AWARENESS_CONFIG_FILE, ' ');
   assert.deepEqual(loadConfig(f.env), defaults);
+});
+
+test('prefix follows emitted severity and resets for routine reports on both hosts', t => {
+  for (const host of ['codex', 'claude']) {
+    const f = fixture(t, {}, host);
+    assert.match(context(f.run()), /^JFYI: current_time=/);
+    const tools = [[6000, 'JFYI'], [300000, 'Beware'], [900000, 'Beware'], [1800000, 'Beware'], [6000, 'JFYI']];
+    for (const [index, [ms, prefix]] of tools.entries()) {
+      const out = context(f.run(0, { tool_use_id: `tool-${index}`, duration_ms: ms }));
+      assert.ok(out.startsWith(`${prefix}: `));
+      assert.equal(out.match(/^(JFYI|Beware):/gm)?.length, 1);
+    }
+    assert.match(context(f.run(600000)), /^JFYI: current_time=/);
+    assert.match(context(f.run(600001, { hook_event_name: 'SessionStart', source: 'compact' })), /^JFYI: compacted=/);
+    f.configure({ prefix: 'Attention', infoPrefix: 'Info' });
+    assert.match(context(f.run(1200000)), /^Info: current_time=/);
+    assert.match(context(f.run(1200000, { tool_use_id: 'custom-warning', duration_ms: 300000 })), /^Attention: tool=/);
+    assert.match(context(f.run(1200001, { hook_event_name: 'SessionStart', source: 'compact' })), /^Info: compacted=/);
+  }
 });

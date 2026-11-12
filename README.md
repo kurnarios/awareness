@@ -9,10 +9,10 @@ A coding agent can spend minutes working without clear signals about elapsed tim
 The `reminders` plugin gives the agent short, timely updates so it can make better decisions about its work. It supplies time, context usage, token counts, slow-tool and turn durations, and native cost when available. After compaction, it reminds the agent to re-read still-needed content that was compacted/summarized.
 
 ```text
-Beware: 2026-11-04T21:52:54-05:00 used_context=37% in=3.7M out=97.9K cached=3.4M
+JFYI: current_time=2026-11-04T21:52:54-05:00 used_context=37% in=3.7M out=97.9K cached=3.4M
 ```
 
-Snapshot and compaction timestamps use the machine's local timezone with an explicit UTC offset, including daylight saving time (for example, `-05:00` or `-04:00`).
+Snapshot timestamps are labeled `current_time=`. Snapshot and compaction timestamps use the machine's local timezone with an explicit UTC offset, including daylight saving time (for example, `-05:00` or `-04:00`).
 
 The separate **watchdog** plugin queues an automatic self-check after an agent finishes a turn and stays idle, covering missed background callbacks and unexplained stops. It never interrupts work or grants approval. Claude main-agent and child wake-ups have been received and audited. Parent deferral during child work has regression-test coverage; that fix and Codex child delivery still need a live check. Codex main-agent receipt after restoring the then-default five-minute timeout is recorded without a native transcript audit. See [Watchdog behavior and timeout/message settings](docs/watchdog.md) and the [cooperative ten-second manual check](docs/watchdog-manual-check.md).
 
@@ -83,11 +83,12 @@ A context increase of **20 percentage points** or an input increase of **500K to
 
 Severity crossings trigger an immediate snapshot. Active severity guidance repeats with subsequent snapshots; slow-tool guidance accompanies that tool's report. Context guidance asks the agent to reduce inputs/outputs and persist handoffs as compaction approaches. Input and cached-token guidance asks it to reduce excessive reading, calls, and granular turns. Unexpected slow tools prompt investigation and optimization.
 
-All reporting thresholds, the prefix, severity messages, and the post-compaction reminder are configurable. This is the full default configuration for `~/.config/awareness/config.json`:
+All reporting thresholds, both prefixes, severity messages, and the post-compaction reminder are configurable. This is the full default configuration for `~/.config/awareness/config.json`:
 
 ```json
 {
   "prefix": "Beware",
+  "infoPrefix": "JFYI",
   "intervalMs": 600000,
   "contextChangePoints": 10,
   "toolReportMs": 5000,
@@ -127,11 +128,12 @@ All reporting thresholds, the prefix, severity messages, and the post-compaction
 }
 ```
 
-You can also save a partial configuration. For example, this reports periodic snapshots every two minutes, reports tools only above ten seconds, and customizes the prefix and compaction reminder:
+You can also save a partial configuration. For example, this reports periodic snapshots every two minutes, reports tools only above ten seconds, and customizes both prefixes and the compaction reminder:
 
 ```json
 {
-  "prefix": "Notice",
+  "prefix": "Attention",
+  "infoPrefix": "Notice",
   "intervalMs": 120000,
   "toolReportMs": 10000,
   "messages": {
@@ -140,22 +142,24 @@ You can also save a partial configuration. For example, this reports periodic sn
 }
 ```
 
+`prefix` controls reports containing warning, error, or critical guidance (default `Beware`). `infoPrefix` controls regular reports (default `JFYI`), including startup, snapshots without severity guidance, tool durations below the warning threshold, native cost, and compaction notices. A combined report uses the severity prefix if any part contains severity guidance, including critical context/input jumps. Each prefix can be overridden independently; existing `prefix` overrides now apply only to severity reports. To use one label everywhere, set both keys to the same string. Reports are agent context; neither prefix requests an acknowledgment or restarts completed work.
+
 Threshold arrays use warning/error/critical order and must contain three nonnegative, ascending numbers. Message arrays contain three strings in the same order. Durations are milliseconds; token counts are absolute decimal counts; context thresholds are percentage points. Capacity always comes from native metadata. Claude reports latest-response counts, so cumulative million-token thresholds cannot be reliably reached there; the hook does not invent cumulative totals.
 
 ## Report examples
 
-These examples illustrate the default output; they are not live receipts. Reports go into the agent's context. Unavailable fields are omitted, and each message has one `Beware:` prefix, even when it spans multiple lines.
+These examples illustrate the default output; they are not live receipts. Reports go into the agent's context. Unavailable fields are omitted, and each message has one prefix, even when it spans multiple lines: `JFYI:` for regular reports and `Beware:` when warning, error, or critical guidance is included.
 
 **Startup before usage data is available**
 
 ```text
-Beware: 2026-11-05T21:40:07-05:00
+JFYI: current_time=2026-11-05T21:40:07-05:00
 ```
 
 **Snapshot with usage and turn duration**
 
 ```text
-Beware: 2026-11-05T21:50:07-05:00 used_context=37% in=3.7M out=97.9K cached=3.4M
+JFYI: current_time=2026-11-05T21:50:07-05:00 used_context=37% in=3.7M out=97.9K cached=3.4M
 turn=00:02:14
 ```
 
@@ -164,7 +168,7 @@ turn=00:02:14
 **Slow tool**
 
 ```text
-Beware: tool=Bash elapsed=00:00:06
+JFYI: tool=Bash elapsed=00:00:06
 turn=00:00:08
 ```
 
@@ -181,17 +185,17 @@ turn=00:05:02
 The following snapshots show separate crossings at 50%, 65%, and 85%. The last step also consumes 20 percentage points, triggering the context-jump alert.
 
 ```text
-Beware: 2026-11-05T21:51:07-05:00 used_context=50% in=3.8M out=98K cached=3.5M
+Beware: current_time=2026-11-05T21:51:07-05:00 used_context=50% in=3.8M out=98K cached=3.5M
 warning: context: Keep context usage low; reduce inputs/outputs, reads, searches, and tool calls.
 ```
 
 ```text
-Beware: 2026-11-05T21:52:07-05:00 used_context=65% in=3.9M out=98.1K cached=3.6M
+Beware: current_time=2026-11-05T21:52:07-05:00 used_context=65% in=3.9M out=98.1K cached=3.6M
 error: context: Persist handoffs on results; organize work to minimize inputs/outputs, reads, searches, and tool calls.
 ```
 
 ```text
-Beware: 2026-11-05T21:53:07-05:00 used_context=85% in=4M out=98.2K cached=3.7M
+Beware: current_time=2026-11-05T21:53:07-05:00 used_context=85% in=4M out=98.2K cached=3.7M
 critical: context: Persist a handoff on every change. Context will soon be compacted; knowledge will be lost unless persisted and reloaded.
 critical: context_jump=20pp: A single step consumed too much context; learn from it and avoid repeating it.
 ```
@@ -199,14 +203,14 @@ critical: context_jump=20pp: A single step consumed too much context; learn from
 **Input-token warning**
 
 ```text
-Beware: 2026-11-05T22:00:07-05:00 used_context=28% in=5M out=100K cached=4.5M
+Beware: current_time=2026-11-05T22:00:07-05:00 used_context=28% in=5M out=100K cached=4.5M
 warning: input: Too verbose: reduce reading and tool calls.
 ```
 
 **Claude native cost, when available**
 
 ```text
-Beware: 2026-11-05T22:10:07-05:00 used_context=3% in=30K out=1.2K cached=20K
+JFYI: current_time=2026-11-05T22:10:07-05:00 used_context=3% in=30K out=1.2K cached=20K
 cost_usd=0.0508318
 ```
 
@@ -215,7 +219,7 @@ Cost is copied from the CLI's native monetary amount. The plugin never calculate
 **After compaction**
 
 ```text
-Beware: compacted=2026-11-05T22:12:07-05:00
+JFYI: compacted=2026-11-05T22:12:07-05:00
 Re-read still-needed files, goals, plans, protocols, specs, etc. whose original content was compacted/summarized.
 ```
 

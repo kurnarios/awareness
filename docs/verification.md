@@ -1,12 +1,20 @@
 # Verification
 
-Current version: 0.4.2. This patch changes the shared Watchdog default from five to 55 minutes (3300000 ms), leaving a five-minute buffer before the intended one-hour cache expiry. Explicit timeout overrides remain supported. Version 0.4.1 defers Claude's parent reminder only during observed child turns and rearms a full idle timeout after the last working child finishes. An idle child's timer or background process is not a blocker. That release left child delivery, message text, and Codex runtime behavior unchanged. Version 0.4.0 introduced the separate watchdog plugin and renamed hooks to reminders. The reminders runtime is unchanged.
+Current version: 0.4.3. Reminders now label snapshot timestamps with `current_time=` and select configurable prefixes: `infoPrefix` (`JFYI`) for regular reports and `prefix` (`Beware`) for emitted warning/error/critical guidance. Compaction notices use the informational prefix. These changes do not alter asynchronous delivery.
+
+Version 0.4.2 changes the shared Watchdog default from five to 55 minutes (3300000 ms), leaving a five-minute buffer before the intended one-hour cache expiry. Explicit timeout overrides remain supported. Version 0.4.1 defers Claude's parent reminder only during observed child turns and rearms a full idle timeout after the last working child finishes. An idle child's timer or background process is not a blocker. That release left child delivery, message text, and Codex runtime behavior unchanged. Version 0.4.0 introduced the separate watchdog plugin and renamed hooks to reminders. The reminders runtime was unchanged in versions 0.4.0–0.4.2.
 
 Claude 0.4.0 main-agent and child wake-ups were both received and audited against native transcripts. See [the sanitized live evidence](watchdog-claude-live-evidence.json). The 0.4.1 parent fix has automated regression coverage; its live behavior and Codex child delivery remain unverified. Codex main-agent receipt at the former five-minute default has been recorded without a native transcript audit.
 
 The historical reports below were collected with the old `hooks` identity and retain their original versions and paths. Version 0.3.1 changes snapshot and compaction timestamps to local time with an explicit UTC offset. Automated checks cover UTC, positive and negative fractional offsets, local date rollover, and both occurrences of a repeated hour at the daylight-saving transition. This timestamp change has not been checked through live model receipt; historical evidence retains its original UTC timestamps. Live receipts below cover different development stages: the basic smoke tests began in 0.2.0, the user's compacted/summarized wording landed in 0.2.1, Claude's percentage accounting was corrected in 0.2.2, cumulative Codex counters and number suffixes landed in 0.2.3, and 0.2.4 adds the approved prefix. The timed live subagent run deliberately kept 0.2.3 installed throughout.
 
 The recorded environment was macOS arm64, Node v26.12.1, Codex CLI 0.166.0, and Claude Code 2.1.308. Follow the [manual check guide](manual-check.md) to repeat the observations; record the versions used in each new run.
+
+## Version 0.4.3 informational and severity prefixes
+
+All 68 automated tests, `npm run check`, and `npm run benchmark` passed. Coverage checks prefix selection immediately below, at, and above each severity threshold, critical jumps, repeated severity snapshots, return to informational reports, custom prefixes, malformed settings, and compaction notices. Startup, tool, and compaction prefix selection is checked for both hosts. The 50-process median/p95/max measurements were 101.29/127.37/335.86 ms for reminders and 99.94/102.24/104.17 ms for Watchdog; these measure process lifetimes, not context delivery latency.
+
+Both Claude plugins and the marketplace passed strict CLI validation. Both Codex plugins installed as 0.4.3 in a temporary `CODEX_HOME`, removed afterwards. All four plugin manifest versions and both Claude marketplace entries match package.json. No personal configuration was changed and no live model test was run. Prefix changes have automated coverage; their effect on model acknowledgment behavior has not been verified through live receipt. Historical receipts below retain their original text.
 
 ## Version 0.4.2 default timeout
 

@@ -11,13 +11,13 @@
       "name": "reminders",
       "source": "./plugins/claude/reminders",
       "description": "Quiet time, token, and execution awareness.",
-      "version": "0.4.2"
+      "version": "0.4.3"
     },
     {
       "name": "watchdog",
       "source": "./plugins/claude/watchdog",
       "description": "An idle self-check reminder, never approval or interruption.",
-      "version": "0.4.2"
+      "version": "0.4.3"
     }
   ]
 }

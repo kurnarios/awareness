@@ -32,7 +32,7 @@ Give the assistant a small useful task, such as reviewing a file. Then ask:
 
 Record its answer verbatim. Do not invoke `awareness.mjs`, reset state, or echo a sample report into the conversation. Normal development tools may cause the installed hook to run; that is expected.
 
-The current prefix is `Beware: ` once per message. Unavailable fields should be absent. A fast call may produce no report at all.
+Each message has one prefix: `JFYI: ` for regular reports, or `Beware: ` when warning, error, or critical guidance is included. Both are configurable through `infoPrefix` and `prefix`, respectively. Snapshot timestamps use `current_time=`, for example `JFYI: current_time=2026-11-05T21:40:07-05:00`. Unavailable fields should be absent. A fast call may produce no report at all.
 
 ## 3. Start three independent subagents
 
