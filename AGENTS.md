@@ -21,6 +21,6 @@ When asked to guide a manual/live check, follow `docs/manual-check.md`. Distingu
 
 As soon as manual testing is finished, restore all temporary test configuration overrides. Preserve pre-existing settings; if the configuration file was created only for the test, delete it. This cleanup also applies when testing fails or is interrupted. Never leave a shortened Watchdog timeout enabled unless the user explicitly asks to keep it.
 
-Update documentation on the spot whenever a change makes it stale or you find it stale.
+Update documentation on the spot whenever a change makes it stale or you find it stale. User-facing documentation describes current behavior, configuration, and limits. Do not narrate release history, migrations, superseded behavior, or how a decision was reached. State verification coverage and gaps directly; preserve recorded evidence verbatim.
 
 Before committing and pushing plugin behavior or configuration changes, bump the release version in `package.json` and run `npm run build`; the build reads that version for both plugin manifests and the Claude marketplace. Verify generated versions match so installed plugins can update.

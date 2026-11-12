@@ -9,12 +9,12 @@ A coding agent can spend minutes working without clear signals about elapsed tim
 The `reminders` plugin gives the agent short, timely updates so it can make better decisions about its work. It supplies time, context usage, token counts, slow-tool and turn durations, and native cost when available. After compaction, it reminds the agent to re-read still-needed content that was compacted/summarized.
 
 ```text
-JFYI: current_time=2026-11-04T21:52:54-05:00 used_context=37% in=3.7M out=97.9K cached=3.4M
+current_time=2026-11-04T21:52:54-05:00 used_context=37% in=3.7M out=97.9K cached=3.4M
 ```
 
 Snapshot timestamps are labeled `current_time=`. Snapshot and compaction timestamps use the machine's local timezone with an explicit UTC offset, including daylight saving time (for example, `-05:00` or `-04:00`).
 
-The separate **watchdog** plugin queues an automatic self-check after an agent finishes a turn and stays idle, covering missed background callbacks and unexplained stops. It never interrupts work or grants approval. Claude main-agent and child wake-ups have been received and audited. Parent deferral during child work has regression-test coverage; that fix and Codex child delivery still need a live check. Codex main-agent receipt after restoring the then-default five-minute timeout is recorded without a native transcript audit. See [Watchdog behavior and timeout/message settings](docs/watchdog.md) and the [cooperative ten-second manual check](docs/watchdog-manual-check.md).
+The separate **watchdog** plugin queues one automatic self-check after an agent finishes a turn and stays idle for 55 minutes. It covers missed background callbacks and unexplained stops. Each agent has its own timer; Claude pauses the parent timer during child turns. See [Watchdog behavior and settings](docs/watchdog.md) and the [cooperative manual check](docs/watchdog-manual-check.md).
 
 ## Install
 
@@ -46,28 +46,6 @@ claude plugin install watchdog@awareness --scope user
 
 Watchdog uses native Claude modules (Claude Code 2.1.287+) and the existing local Codex daemon/queue (packaged against Codex 0.167.0). It does not support Codex `--no-daemon` or a remote server. Restart/reload the host and trust the Codex watchdog hooks as appropriate. Installing `reminders` alone does not enable it.
 
-## Upgrade from `hooks`
-
-Version 0.4.0 renames the plugin from `hooks` to `reminders`. This changes its installation identity; updating the old plugin does not rename it. Refresh the marketplace, remove the old installation, then install the new name:
-
-**Codex**
-
-```sh
-codex plugin marketplace upgrade awareness
-codex plugin remove hooks@awareness
-codex plugin add reminders@awareness
-```
-
-**Claude Code**
-
-```sh
-claude plugin marketplace update awareness
-claude plugin uninstall hooks@awareness --scope user
-claude plugin install reminders@awareness --scope user
-```
-
-Use the scope of your existing Claude installation. Restart the CLI and review the renamed Codex hooks through `/hooks`. Do not keep both names enabled: they would produce duplicate reports. Your `~/.config/awareness/config.json`, environment overrides, and reporting state continue to work.
-
 ## Reminders configuration and severity
 
 Optional user configuration lives at `~/.config/awareness/config.json` on both hosts. Set `AWARENESS_CONFIG_FILE` to use another file. Use the complete default configuration below, also available as [config.example.json](docs/config.example.json), or supply only the keys you want to change. No profile files are created automatically. Unknown keys and invalid values are ignored; missing or malformed files use defaults.
@@ -88,7 +66,7 @@ All reporting thresholds, both prefixes, severity messages, and the post-compact
 ```json
 {
   "prefix": "Beware",
-  "infoPrefix": "JFYI",
+  "infoPrefix": "",
   "intervalMs": 600000,
   "contextChangePoints": 10,
   "toolReportMs": 5000,
@@ -142,24 +120,24 @@ You can also save a partial configuration. For example, this reports periodic sn
 }
 ```
 
-`prefix` controls reports containing warning, error, or critical guidance (default `Beware`). `infoPrefix` controls regular reports (default `JFYI`), including startup, snapshots without severity guidance, tool durations below the warning threshold, native cost, and compaction notices. A combined report uses the severity prefix if any part contains severity guidance, including critical context/input jumps. Each prefix can be overridden independently; existing `prefix` overrides now apply only to severity reports. To use one label everywhere, set both keys to the same string. Reports are agent context; neither prefix requests an acknowledgment or restarts completed work.
+`prefix` controls reports containing warning, error, or critical guidance (default `Beware`). `infoPrefix` controls regular reports (default empty), including startup, snapshots without severity guidance, tool durations below the warning threshold, native cost, and compaction notices. A combined report uses the severity prefix if any part contains severity guidance, including critical context/input jumps. An empty prefix omits both the label and its `: ` separator. A nonempty prefix is followed by `: ` once, at the start of the message. Each prefix can be configured independently. To use one label everywhere, set both keys to the same string. Reports are agent context; neither prefix requests an acknowledgment or restarts completed work.
 
 Threshold arrays use warning/error/critical order and must contain three nonnegative, ascending numbers. Message arrays contain three strings in the same order. Durations are milliseconds; token counts are absolute decimal counts; context thresholds are percentage points. Capacity always comes from native metadata. Claude reports latest-response counts, so cumulative million-token thresholds cannot be reliably reached there; the hook does not invent cumulative totals.
 
 ## Report examples
 
-These examples illustrate the default output; they are not live receipts. Reports go into the agent's context. Unavailable fields are omitted, and each message has one prefix, even when it spans multiple lines: `JFYI:` for regular reports and `Beware:` when warning, error, or critical guidance is included.
+These examples illustrate the default output; they are not live receipts. Reports go into the agent's context. Unavailable fields are omitted. Regular reports have no prefix by default; messages containing warning, error, or critical guidance start with `Beware: ` once, even when they span multiple lines.
 
 **Startup before usage data is available**
 
 ```text
-JFYI: current_time=2026-11-05T21:40:07-05:00
+current_time=2026-11-05T21:40:07-05:00
 ```
 
 **Snapshot with usage and turn duration**
 
 ```text
-JFYI: current_time=2026-11-05T21:50:07-05:00 used_context=37% in=3.7M out=97.9K cached=3.4M
+current_time=2026-11-05T21:50:07-05:00 used_context=37% in=3.7M out=97.9K cached=3.4M
 turn=00:02:14
 ```
 
@@ -168,7 +146,7 @@ turn=00:02:14
 **Slow tool**
 
 ```text
-JFYI: tool=Bash elapsed=00:00:06
+tool=Bash elapsed=00:00:06
 turn=00:00:08
 ```
 
@@ -210,7 +188,7 @@ warning: input: Too verbose: reduce reading and tool calls.
 **Claude native cost, when available**
 
 ```text
-JFYI: current_time=2026-11-05T22:10:07-05:00 used_context=3% in=30K out=1.2K cached=20K
+current_time=2026-11-05T22:10:07-05:00 used_context=3% in=30K out=1.2K cached=20K
 cost_usd=0.0508318
 ```
 
@@ -219,7 +197,7 @@ Cost is copied from the CLI's native monetary amount. The plugin never calculate
 **After compaction**
 
 ```text
-JFYI: compacted=2026-11-05T22:12:07-05:00
+compacted=2026-11-05T22:12:07-05:00
 Re-read still-needed files, goals, plans, protocols, specs, etc. whose original content was compacted/summarized.
 ```
 
@@ -231,7 +209,7 @@ Watchdog reads the same optional `~/.config/awareness/config.json`, or `AWARENES
 { "watchdog": { "timeoutMs": 10000 } }
 ```
 
-The default is 55 minutes (`3300000` ms), chosen to leave a five-minute buffer before the intended one-hour cache expiry while avoiding frequent five-minute checks. `watchdog.message` overrides the self-check body; either setting can be supplied independently. A fixed automatic/non-approval envelope is always included. See the [complete defaults](docs/watchdog.config.example.json), [implementation and limits](docs/watchdog.md), and [manual test](docs/watchdog-manual-check.md). Watchdog injects context only when its idle timer expires; session/subagent startup and teardown emit nothing. Ordinary task completion may receive one self-check; the agent decides whether already-authorized work remains. Watchdog's own reply does not trigger another reminder.
+The default idle timeout is 55 minutes (`3300000` ms). `watchdog.message` overrides the self-check body; either setting can be supplied independently. A fixed automatic/non-approval envelope is always included. See the [complete defaults](docs/watchdog.config.example.json), [implementation and limits](docs/watchdog.md), and [manual test](docs/watchdog-manual-check.md). Watchdog injects context only when its idle timer expires; session/subagent startup and teardown emit nothing. Ordinary task completion may receive one self-check; the agent decides whether already-authorized work remains. Watchdog's own reply does not trigger another reminder.
 
 ## Report an issue
 
@@ -242,12 +220,12 @@ The default is 55 minutes (`3300000` ms), chosen to leave a five-minute buffer b
 - Checks every tool call; reports context after a **10-percentage-point change** from the previous report or **10 minutes** of activity.
 - Reports tool durations only above **5 seconds**. Adds turn time and CLI-supplied cost when available.
 - Keeps each agent's counters and reporting schedule separate, including parallel subagents.
-- All reminders hooks run synchronously: the host waits for collection, calculation, and context output before continuing. This removes the asynchronous delivery path observed adding context after a final answer and triggering a second Codex model generation; see [the session audit](docs/verification.md#remaining-interface-limits). Each invocation adds roughly 100 ms in local benchmarks. The hook makes no network or model requests and emits no blocking or permission decisions. Fresh live verification is still needed for the combined fix.
+- All reminders hooks run synchronously: the host waits for collection, calculation, and context output before continuing. Each invocation adds roughly 100 ms in local benchmarks. The handler uses no network or model requests and emits no blocking or permission decisions.
 
 Unavailable fields are omitted. Codex token counts are cumulative thread totals; Claude counts come from its latest recorded response. Cost is supplied by the CLI, never calculated by this plugin. Your status line is unchanged.
 
 [Manual check guide](docs/manual-check.md) · [Behavior and limits](docs/reference.md) · [Verification](docs/verification.md) · [Implementation comparison](docs/comparison.md)
 
-MIT licensed. Reminders uses one dependency-free handler packaged for both CLIs; Watchdog has separate native-host adapters and no runtime dependencies. For development, run `npm test` and `npm run check`; edit `scripts/awareness.mjs` and run `npm run build` to update the plugin copies.
+MIT licensed. Reminders uses one dependency-free handler packaged for both CLIs; Watchdog has separate native-host adapters and no runtime dependencies. Edit source in `scripts/`, then run `npm run build` to update the generated plugin copies. For handler changes, run `npm test`, `npm run check`, and `npm run benchmark`. For packaging changes, validate both marketplace formats with the installed CLIs using a temporary Codex profile; see [verification](docs/verification.md).
 
 GitHub Actions runs tests, generated-file checks, and benchmarks on Linux and macOS with one Node.js LTS version (26) in the matrix for every push and pull request. A separate job uses the same Node version to validate both marketplace formats with pinned Codex and Claude CLIs, using a temporary Codex profile. CI does not run live model tests or require model credentials.

@@ -52,7 +52,7 @@ test('all default and custom severity thresholds select only the highest reached
           if (key === 'toolMs') Object.assign(extra, { tool_use_id: extra.session_id, duration_ms: value });
           const out = f.run(0, extra);
           const messages = guidance(out);
-          assert.ok(context(out).startsWith(expected < 0 ? 'JFYI: ' : 'Beware: '));
+          assert.ok(context(out).startsWith(expected < 0 ? key === 'toolMs' ? 'tool=' : 'current_time=' : 'Beware: '));
           const messageKey = key === 'toolMs' ? 'tool' : key;
           assert.deepEqual(messages, expected < 0 ? [] : [
             `${levels[expected]}: ${key === 'toolMs' ? '' : `${key}: `}${defaults.messages[messageKey][expected]}`,
@@ -136,7 +136,7 @@ test('severity guidance repeats on snapshots, resets after a drop, and crosses a
     assert.equal(guidance(repeated).filter(line => line.startsWith(`${level}:`)).length, 3);
     f.write(); assert.equal(f.run(1000), undefined, 'drop alone does not trigger severity guidance');
     const cleared = f.run(2000);
-    assert.match(context(cleared), /^JFYI:/);
+    assert.match(context(cleared), /^current_time=/);
     assert.deepEqual(guidance(cleared), [], 'cleared levels do not repeat');
     f.write({ percent, input, cached });
     assert.equal(guidance(f.run(2000)).filter(line => line.startsWith(`${level}:`)).length, 3);
@@ -318,7 +318,7 @@ test('configuration changes are reloaded on the next event without resetting pri
   assert.equal(f.run(), undefined);
   f.configure({ intervalMs: 1 });
   const out = context(f.run(1));
-  assert.ok(out.startsWith('JFYI: '));
+  assert.match(out, /^current_time=/);
   assert.deepEqual(guidance({ hookSpecificOutput: { additionalContext: out } }), []);
 });
 
@@ -356,18 +356,32 @@ test('nested non-object settings fall back, valid sibling overrides survive, and
 test('prefix follows emitted severity and resets for routine reports on both hosts', t => {
   for (const host of ['codex', 'claude']) {
     const f = fixture(t, {}, host);
-    assert.match(context(f.run()), /^JFYI: current_time=/);
-    const tools = [[6000, 'JFYI'], [300000, 'Beware'], [900000, 'Beware'], [1800000, 'Beware'], [6000, 'JFYI']];
+    assert.match(context(f.run()), /^current_time=/);
+    const tools = [[6000, ''], [300000, 'Beware'], [900000, 'Beware'], [1800000, 'Beware'], [6000, '']];
     for (const [index, [ms, prefix]] of tools.entries()) {
       const out = context(f.run(0, { tool_use_id: `tool-${index}`, duration_ms: ms }));
-      assert.ok(out.startsWith(`${prefix}: `));
-      assert.equal(out.match(/^(JFYI|Beware):/gm)?.length, 1);
+      assert.ok(out.startsWith(prefix ? `${prefix}: tool=` : 'tool='));
+      assert.equal(out.match(/^Beware:/gm)?.length ?? 0, prefix ? 1 : 0);
     }
-    assert.match(context(f.run(600000)), /^JFYI: current_time=/);
-    assert.match(context(f.run(600001, { hook_event_name: 'SessionStart', source: 'compact' })), /^JFYI: compacted=/);
+    assert.match(context(f.run(600000)), /^current_time=/);
+    assert.match(context(f.run(600001, { hook_event_name: 'SessionStart', source: 'compact' })), /^compacted=/);
     f.configure({ prefix: 'Attention', infoPrefix: 'Info' });
     assert.match(context(f.run(1200000)), /^Info: current_time=/);
     assert.match(context(f.run(1200000, { tool_use_id: 'custom-warning', duration_ms: 300000 })), /^Attention: tool=/);
     assert.match(context(f.run(1200001, { hook_event_name: 'SessionStart', source: 'compact' })), /^Info: compacted=/);
+  }
+});
+
+test('empty prefixes omit separators for combined reports and compaction on both hosts', t => {
+  for (const host of ['codex', 'claude']) {
+    const f = fixture(t, { infoPrefix: '', prefix: '' }, host);
+    const combined = context(f.run(0, { tool_use_id: 'routine', duration_ms: 6000 }));
+    assert.match(combined, /^tool=tool elapsed=00:00:06\ncurrent_time=/);
+    assert.doesNotMatch(combined, /^[: ]/m);
+    const severe = context(f.run(600000, { tool_use_id: 'warning', duration_ms: 300000 }));
+    assert.match(severe, /^tool=tool elapsed=00:05:00\nwarning:/);
+    assert.doesNotMatch(severe, /^[: ]/m);
+    assert.equal(context(f.run(0, { hook_event_name: 'SessionStart', source: 'compact' })),
+      `compacted=${formatTimestamp(1000000)}\n${defaults.messages.postCompaction}`);
   }
 });

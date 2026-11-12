@@ -1,6 +1,6 @@
 # Manual check guide
 
-This guide covers `reminders@awareness` (formerly `hooks`). For Watchdog's separate cooperative idle-wake test, including the real configuration override to ten seconds and never-finishing background waiter, use [Watchdog manual check](watchdog-manual-check.md). Do not apply that timeout override to the ten-minute reminders test below.
+This guide covers `reminders@awareness`. For Watchdog's separate cooperative idle-wake test, including the real configuration override to ten seconds and never-finishing background waiter, use [Watchdog manual check](watchdog-manual-check.md). Do not apply that timeout override to the ten-minute reminders test below.
 
 Use this procedure to verify what an agent actually receives during ordinary work, including independent subagent reporting. The assistant should guide the run, keep track of deadlines, collect exact quotes, and audit them against native records.
 
@@ -32,7 +32,7 @@ Give the assistant a small useful task, such as reviewing a file. Then ask:
 
 Record its answer verbatim. Do not invoke `awareness.mjs`, reset state, or echo a sample report into the conversation. Normal development tools may cause the installed hook to run; that is expected.
 
-Each message has one prefix: `JFYI: ` for regular reports, or `Beware: ` when warning, error, or critical guidance is included. Both are configurable through `infoPrefix` and `prefix`, respectively. Snapshot timestamps use `current_time=`, for example `JFYI: current_time=2026-11-05T21:40:07-05:00`. Unavailable fields should be absent. A fast call may produce no report at all.
+Regular reports have no prefix by default; messages containing warning, error, or critical guidance start with `Beware: ` once. Both are configurable through `infoPrefix` (default empty) and `prefix` (default `Beware`), respectively. Empty prefixes omit the `: ` separator too. Snapshot timestamps use `current_time=`, for example `current_time=2026-11-05T21:40:07-05:00`. Unavailable fields should be absent. A fast call may produce no report at all.
 
 ## 3. Start three independent subagents
 
@@ -68,7 +68,7 @@ After each deadline, first ask the **same** agent:
 
 An unchanged answer is not a failure: the passive question need not fire an eligible hook.
 
-Next assign that agent its small continuation task from the table. Ask it to quote any new Awareness text received during that work. Reminders hooks now run synchronously. If no report arrives, record that observation rather than making up an answer or repeatedly running tools to provoke one.
+Next assign that agent its small continuation task from the table. Ask it to quote any new Awareness text received during that work. Reminders hooks run synchronously. If no report arrives, record that observation rather than making up an answer or repeatedly running tools to provoke one.
 
 Expected observations:
 
@@ -94,8 +94,6 @@ Codex uses its native current context footprint for percentage, and native cumul
 
 Cost must come directly from a native monetary amount. Do not price tokens or borrow another agent's cost. Missing cost is not zero cost.
 
-The historical asynchronous run measured delivery lag of 2.210–13.591 seconds; it does not verify the current synchronous delivery. All six reports matched their own native values at generation despite the later delivery.
-
 ## 7. Check other signals only through normal events
 
 - **Slow tools:** observe useful work that genuinely exceeds five seconds. A combined shell call times the whole call; it does not separately time every command inside it.
@@ -117,13 +115,9 @@ Use precise conclusions: **received**, **audited and matched**, **failed**, or *
 
 Remove temporary profiles, captures, auth symlinks, and test-created artifacts owned by the procedure. Preserve original credentials, user settings, normal conversation history, and shared application databases. If a bug is found, fix and test it, then repeat the affected live case using a fresh installed version; do not silently mix versions within one timed observation.
 
-## Previous run
+## Verification status
 
-- [Exact reports and independent schedules](subagent-evidence.json)
-- [Six-report audit against native records](subagent-audit.json)
-- [Broader verification and remaining limits](verification.md)
-
-The prior live run established Codex parent/child isolation and independent ten-minute schedules. Claude child behavior was covered by automated fixtures, not live subagents.
+See [verification](verification.md) for automated coverage and live-test limits. Record each run independently; a passing fixture or another agent's receipt does not establish delivery in this run.
 
 ## Watchdog: cooperative ten-second check
 

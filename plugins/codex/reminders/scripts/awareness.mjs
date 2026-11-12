@@ -8,7 +8,7 @@ import { pathToFileURL } from 'node:url';
 
 export const defaults = {
   prefix: 'Beware',
-  infoPrefix: 'JFYI',
+  infoPrefix: '',
   intervalMs: 600000,
   contextChangePoints: 10,
   toolReportMs: 5000,
@@ -70,6 +70,7 @@ function severity(value, thresholds) {
 const TAIL = 1024 * 1024;
 const hash = value => crypto.createHash('sha256').update(value).digest('hex').slice(0, 32);
 const number = value => Number.isFinite(value) && value >= 0 ? value : undefined;
+const withPrefix = (prefix, text) => prefix ? `${prefix}: ${text}` : text;
 export function formatTimestamp(now) {
   const offset = new Date(now).getTimezoneOffset();
   const local = new Date(now - offset * 60000).toISOString().slice(0, 19);
@@ -264,7 +265,7 @@ export function handle(p, { host = 'codex', env = process.env, now = Date.now() 
   fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
   if (event === 'SessionStart' && p.source === 'compact') {
     return { hookSpecificOutput: { hookEventName: event, additionalContext:
-      `${config.infoPrefix}: compacted=${formatTimestamp(now)}\n${config.messages.postCompaction}` } };
+      withPrefix(config.infoPrefix, `compacted=${formatTimestamp(now)}\n${config.messages.postCompaction}`) } };
   }
   const stateFile = path.join(dir, 'snapshot.json');
   const parts = [];
@@ -341,7 +342,7 @@ export function handle(p, { host = 'codex', env = process.env, now = Date.now() 
     const cost = nativeCost(p, host, getRecords());
     if (cost !== undefined) parts.push(`cost_usd=${cost}`);
     const prefix = hasSeverity ? config.prefix : config.infoPrefix;
-    return { hookSpecificOutput: { hookEventName: event, additionalContext: `${prefix}: ${parts.join('\n')}` } };
+    return { hookSpecificOutput: { hookEventName: event, additionalContext: withPrefix(prefix, parts.join('\n')) } };
   }
 }
 

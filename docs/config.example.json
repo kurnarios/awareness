@@ -1,6 +1,6 @@
 {
   "prefix": "Beware",
-  "infoPrefix": "JFYI",
+  "infoPrefix": "",
   "intervalMs": 600000,
   "contextChangePoints": 10,
   "toolReportMs": 5000,

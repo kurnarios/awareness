@@ -1,23 +1,35 @@
-# Comparison with related plugins
+# Implementation comparison
 
-Reviewed the source of [AraneaDev/timestamps](https://github.com/AraneaDev/timestamps/tree/dd530fc52eb9032552f706df75b3e6bcb2dd5962) at `dd530fc` and [asuworks/claude-code-context-awareness-hooks](https://github.com/asuworks/claude-code-context-awareness-hooks/tree/f8dd751e6ee9f7fd96482af0890d7a9628ead708) at `f8dd751`. No third-party scripts were run or copied, and no model calls were made for this comparison. Temporary downloads were removed afterwards.
+Awareness packages independent `reminders` and `watchdog` plugins for Codex and Claude Code. Each host uses its native records and delivery APIs.
 
-## Correction implemented
+## Reminders
 
-Asuworks reads Claude's native percentage through [statusline-bridge.cjs](https://github.com/asuworks/claude-code-context-awareness-hooks/blob/f8dd751e6ee9f7fd96482af0890d7a9628ead708/hooks/statusline-bridge.cjs). Checking that field against [Claude's official reference](https://code.claude.com/docs/en/statusline#context-window-fields) exposed a bug in Awareness: Claude's context percentage includes fresh input and cache reads/writes, but excludes output tokens. Awareness 0.2.2 fixes that calculation and retains the separate output count. A regression test verifies that 50,000 input and 20,000 output tokens in a 200,000-token window report 25%, not 35%.
-
-## Comparison and useful follow-ups
-
-| Area | Finding | Decision |
+| Area | Codex | Claude Code |
 | --- | --- | --- |
-| Reporting trigger | Asuworks reports every prompt and every fifth tool call. | Keep checking every post-tool event. Emit on a ten-percentage-point change from the previous report, the time interval, or another configured condition. No every-N-calls sampling. |
-| Native Claude metrics | Asuworks bridges status-line percentage, capacity, and cost into a session file. | An optional bridge could improve freshness and support custom/gateway model capacities. It would need to preserve the user's existing status line and isolate agent data; no status-line replacement was installed. |
-| Missing data | Asuworks defaults missing usage to zero and capacity to 200,000. | Those defaults were not adopted. Continue omitting unavailable fields and reading native capacity metadata. |
-| Agent isolation | Asuworks keys its bridge and read-modify-write counter by session ID. | Keep Awareness's separate agent state, exact tool-ID matching, exclusive deduplication markers, and non-waiting report locks. |
-| Tool timing | Timestamps uses Claude's native duration and adds a pre-tool timer for Codex. | Keep native Claude duration and post-only transcript lookup for Codex. |
-| Turn-start retention | Timestamps persists turn timing state. | Caching a verified transcript start would improve Awareness's coverage when a long turn's start leaves the bounded transcript tail. This is a follow-up, not an added prompt/pre-tool hook. |
-| State cleanup | Timestamps prunes stale state after seven days; asuworks cleans session files at SessionEnd. | Awareness currently prunes tool markers in active directories. Bounded cleanup of inactive session directories is a worthwhile follow-up. Codex's synchronous SessionEnd must not introduce waiting. |
-| Additional features | Timestamps has resume-gap notes, command-duration memory, session summaries, timelines, and display clocks. | These remain outside the present minimal-context scope. |
-| Compaction | Timestamps injects the session timeline through SessionStart(source=compact). | This supports the chosen delivery event. Preserve the user's exact compacted/summarized reminder. |
+| Events | SessionStart and PostToolUse | SessionStart, PostToolUse, and PostToolUseFailure |
+| Context footprint | Native recorded context usage | Cache-inclusive input tokens from the latest response |
+| Token counters | Cumulative thread totals | Latest response counts |
+| Capacity | Native session/model metadata | Exact model match in the local model catalog |
+| Tool duration | Supplied duration or transcript lookup by tool ID | Native duration or transcript lookup by tool ID |
+| Turn start | Matching native turn ID | Latest actual user prompt, excluding tool results and injected reminders |
+| Cost | Omitted; supported records supply no native monetary amount | Native `cost-state.totalCostUSD` |
+| Compaction | SessionStart with source `compact` | SessionStart with source `compact` |
 
-Only the Claude percentage correction was implemented. The native-metrics bridge and state-retention improvements are documented follow-ups; extra UI, command history, compaction advice, and new timing hooks were not added.
+Both hosts run reminders synchronously and keep agent reporting state separate. Snapshots occur every ten minutes during activity, after a ten-percentage-point context change, or on a severity/data trigger. Tools report once above five seconds. Regular reports have no prefix by default; severity reports use `Beware`. Configuration controls thresholds, prefixes, and messages.
+
+Transcript reads are bounded to 1 MiB. Missing data is omitted. A tool or turn start outside the readable tail cannot be recovered without another native timing value. Tool markers are pruned in active state directories; inactive directories require explicit removal.
+
+## Watchdog
+
+| Area | Codex | Claude Code |
+| --- | --- | --- |
+| Lifecycle | Synchronous, silent command hooks | Native plugin module events |
+| Idle timer | Detached local alarm worker | Native `clock.after` timer |
+| Delivery | Local daemon queue for the target thread | Attributed `prompt.submit` for the main agent; `session.send` for a child |
+| Parent during child work | Native target-thread eligibility checks | Parent timer pauses during observed child turns |
+| State | Private files under `AWARENESS_STATE_DIR/watchdog` | Session-local native timer state |
+| Requirements | Local daemon and Unix socket | Native plugin modules, Claude Code 2.1.287+ |
+
+The default idle timeout is 55 minutes. Each eligible episode permits one reminder. Explicit stops suppress reminders, and a Watchdog response does not rearm its own timer. Delivery preserves approval requirements and never interrupts active work.
+
+See [reminders behavior](reference.md), [Watchdog behavior](watchdog.md), and [verification](verification.md) for configuration details and test limits.
