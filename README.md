@@ -242,7 +242,7 @@ The default is 55 minutes (`3300000` ms), chosen to leave a five-minute buffer b
 - Checks every tool call; reports context after a **10-percentage-point change** from the previous report or **10 minutes** of activity.
 - Reports tool durations only above **5 seconds**. Adds turn time and CLI-supplied cost when available.
 - Keeps each agent's counters and reporting schedule separate, including parallel subagents.
-- Runs in the background. The hook makes no network or model requests and never blocks or forces another turn.
+- Runs synchronously so context arrives before the host continues. The hook makes no network or model requests and never emits blocking decisions or forces another turn.
 
 Unavailable fields are omitted. Codex token counts are cumulative thread totals; Claude counts come from its latest recorded response. Cost is supplied by the CLI, never calculated by this plugin. Your status line is unchanged.
 

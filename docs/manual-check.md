@@ -68,7 +68,7 @@ After each deadline, first ask the **same** agent:
 
 An unchanged answer is not a failure: the passive question need not fire an eligible hook.
 
-Next assign that agent its small continuation task from the table. Ask it to quote any new Awareness text received during that work. If asynchronous output has not yet arrived, ask another passive question rather than making up an answer or repeatedly running tools to provoke one.
+Next assign that agent its small continuation task from the table. Ask it to quote any new Awareness text received during that work. Reminders hooks now run synchronously. If no report arrives, record that observation rather than making up an answer or repeatedly running tools to provoke one.
 
 Expected observations:
 
@@ -94,7 +94,7 @@ Codex uses its native current context footprint for percentage, and native cumul
 
 Cost must come directly from a native monetary amount. Do not price tokens or borrow another agent's cost. Missing cost is not zero cost.
 
-Asynchronous delay is a measured limitation, not something to hide. In the recorded run, delivery lag was 2.210–13.591 seconds. All six reports matched their own native values at generation despite the later delivery.
+The historical asynchronous run measured delivery lag of 2.210–13.591 seconds; it does not verify the current synchronous delivery. All six reports matched their own native values at generation despite the later delivery.
 
 ## 7. Check other signals only through normal events
 
@@ -107,7 +107,7 @@ Asynchronous delay is a measured limitation, not something to hide. In the recor
 
 Only when the user explicitly requests a synthetic spike test, generate a temporary file of short repeated words and read it through the normal tool interface. This is an exception to the ordinary-work procedure above, not evidence of natural context growth. Record the requested word count and whether the tool returned the entire file or truncated it. A file containing 100,000 words does not guarantee that 100,000 words entered model context: tool output limits may truncate it. Do not change personal configuration, reporting state, clocks, or context capacity to force a result.
 
-Quote only actual injected messages. Asynchronous hooks can observe native usage before the large tool result is counted; absence of an immediate report is inconclusive. Allow delivery at a subsequent conversation boundary rather than repeatedly issuing calls to provoke a report. Compare any report with its own native generation-time counters in a later read-only audit. Do not equate word count with token count or assume the read crosses the configured percentage-point threshold. Preserve or remove the temporary file as agreed with the user.
+Quote only actual injected messages. Hooks can observe native usage before the large tool result is counted; absence of an immediate report is inconclusive. Allow delivery at a subsequent conversation boundary rather than repeatedly issuing calls to provoke a report. Compare any report with its own native generation-time counters in a later read-only audit. Do not equate word count with token count or assume the read crosses the configured percentage-point threshold. Preserve or remove the temporary file as agreed with the user.
 
 ## 8. Record the result and clean up
 
