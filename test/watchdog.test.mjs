@@ -44,7 +44,7 @@ test('custom text cannot remove the automatic non-approval envelope or standing 
 
 test('Codex arms only after a stop, deduplicates stops, invalidates on real activity, and isolates children', t => {
   const f = fixture(t);
-  assert.equal(f.event('SessionStart').hookSpecificOutput.additionalContext, instruction);
+  assert.equal(f.event('SessionStart').state.phase, 'active');
   const root = f.event('Stop');
   assert.equal(root.state.deadline, 11000);
   assert.equal(root.state.config.timeoutMs, 10000);
@@ -70,6 +70,55 @@ test('Codex resolves a child transcript header instead of borrowing the parent i
   const result = f.event('Stop', { transcript_path: transcript });
   assert.equal(result.state.threadId, 'actual-child');
   assert.equal(f.event('SubagentStop', { agent_transcript_path: path.join(f.dir, 'missing.jsonl') }), undefined);
+});
+
+test('watchdog startup and teardown emit no context on either host; only timed reminders carry instructions', t => {
+  const f = fixture(t);
+  for (const host of ['codex', 'claude']) {
+    for (const hook_event_name of ['SessionStart', 'SubagentStart', 'SessionEnd']) {
+      const payload = { session_id: 'main-thread', hook_event_name,
+        ...(hook_event_name === 'SubagentStart' ? { agent_id: 'child-a' } : {}) };
+      const value = handle(payload, { host, env: f.env, launch: false });
+      assert.equal(value?.hookSpecificOutput, undefined);
+      if (host === 'codex') assert.equal(value.state.phase, hook_event_name === 'SessionEnd' ? 'paused' : 'active');
+      const result = spawnSync(process.execPath, ['scripts/watchdog.mjs', host], {
+        input: JSON.stringify(payload), env: f.env, encoding: 'utf8',
+      });
+      assert.equal(result.status, 0);
+      assert.equal(result.stdout, '');
+      assert.equal(result.stderr, '');
+    }
+  }
+  assert.ok(reminder(defaults).includes(instruction));
+});
+
+test('Codex SessionEnd exits 0 with zero output and retires main and child alarms', async t => {
+  const f = fixture(t);
+  f.event('SessionStart');
+  const main = f.event('Stop', {}, -20000);
+  const child = f.event('SubagentStop', { agent_id: 'child-a' }, -20000);
+  const input = JSON.stringify({ session_id: 'main-thread', hook_event_name: 'SessionEnd' });
+  const result = spawnSync(process.execPath, ['scripts/watchdog.mjs', 'codex'], { input, env: f.env, encoding: 'utf8' });
+  assert.equal(result.status, 0);
+  assert.equal(result.stdout, '');
+  assert.equal(result.stderr, '');
+  assert.equal(JSON.parse(fs.readFileSync(main.file)).phase, 'paused');
+  assert.ok(fs.existsSync(main.state.pauseFile));
+  let connected = false;
+  const options = { env: f.env, rpcFactory: async () => { connected = true; throw new Error('must not connect'); } };
+  await alarm(main.file, main.state.alarm, options);
+  await alarm(child.file, child.state.alarm, options);
+  assert.equal(connected, false);
+
+  // Cleanup errors must also exit successfully without producing any message.
+  const blocked = path.join(f.dir, 'blocked');
+  fs.writeFileSync(blocked, 'not a directory');
+  const failed = spawnSync(process.execPath, ['scripts/watchdog.mjs', 'codex'], {
+    input, env: { ...f.env, AWARENESS_STATE_DIR: blocked }, encoding: 'utf8',
+  });
+  assert.equal(failed.status, 0);
+  assert.equal(failed.stdout, '');
+  assert.equal(failed.stderr, '');
 });
 
 function fakeRPC({ status = 'idle', queued = [], becomesBusy = false, failStart = false } = {}) {

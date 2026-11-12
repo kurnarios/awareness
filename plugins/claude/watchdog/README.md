@@ -2,7 +2,7 @@
 
 Requires Node.js 20+ on PATH. Native mod timers require Claude Code 2.1.287 or later.
 
-Queues one automatic self-check after an agent finishes a turn and stays idle for 55 minutes. Main agents and children have separate timers. The parent timer pauses during observed child turns and restarts after the last working child finishes; an idle child timer or background process alone does not block the parent. It never interrupts or cancels work, grants approval, or treats a background callback as completed. A watchdog response does not schedule another reminder. Explicit user stops suppress reminders. Native attribution is preserved in Claude; Codex queue text is explicitly marked as an automatic plugin message, not approval.
+Queues one automatic self-check after an agent finishes a turn and stays idle for 55 minutes. Main agents and children have separate timers. Context is delivered only when the idle timer expires; startup and teardown emit nothing. The parent timer pauses during observed child turns and restarts after the last working child finishes; an idle child timer or background process alone does not block the parent. It never interrupts or cancels work, grants approval, or treats a background callback as completed. A watchdog response does not schedule another reminder. Explicit user stops suppress reminders. Native attribution is preserved in Claude; Codex queue text is explicitly marked as an automatic plugin message, not approval.
 
 Configure a partial watchdog section in ~/.config/awareness/config.json, or the existing AWARENESS_CONFIG_FILE override:
 

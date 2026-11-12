@@ -2,30 +2,5 @@
   "modules": [
     "../scripts/watchdog-claude.mjs"
   ],
-  "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/watchdog.mjs\" claude",
-            "async": true,
-            "timeout": 2
-          }
-        ]
-      }
-    ],
-    "SubagentStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/watchdog.mjs\" claude",
-            "async": true,
-            "timeout": 2
-          }
-        ]
-      }
-    ]
-  }
+  "hooks": {}
 }

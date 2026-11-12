@@ -5,7 +5,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
-import { configLimit, defaults, parseSettings, reminder, isReminder, instruction } from './watchdog-config.mjs';
+import { configLimit, defaults, parseSettings, reminder, isReminder } from './watchdog-config.mjs';
 import { connect } from './watchdog-rpc.mjs';
 
 export function loadConfig(env = process.env) {
@@ -57,12 +57,7 @@ function threadId(p) {
 export function handle(p, { host = 'codex', env = process.env, now = Date.now(), launch = true } = {}) {
   if (!p || typeof p.session_id !== 'string') return;
   const event = p.hook_event_name;
-  if (host === 'claude') {
-    if (['SessionStart', 'SubagentStart'].includes(event)) return {
-      hookSpecificOutput: { hookEventName: event, additionalContext: instruction },
-    };
-    return;
-  }
+  if (host === 'claude') return; // Claude lifecycle state is managed by the native module.
   if (!['SessionStart', 'SubagentStart', 'UserPromptSubmit', 'PostToolUse', 'Stop', 'SubagentStop', 'Interrupt', 'SessionEnd'].includes(event)) return;
   const id = threadId(p);
   if (!id) return;
@@ -98,9 +93,6 @@ export function handle(p, { host = 'codex', env = process.env, now = Date.now(),
     const child = spawn(process.execPath, [process.argv[1], 'alarm', file, alarm], { env, detached: true, stdio: 'ignore' });
     child.on('error', () => {}); child.unref();
   }
-  if (['SessionStart', 'SubagentStart'].includes(event)) return {
-    hookSpecificOutput: { hookEventName: event, additionalContext: instruction },
-  };
   return { file, state }; // Internal return, never printed as hook output.
 }
 function current(file, alarm) {
@@ -199,8 +191,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     process.stdin.on('data', chunk => { input += chunk; if (input.length > 8 * 1024 * 1024) process.exit(0); });
     process.stdin.on('end', () => {
       try {
-        const result = handle(JSON.parse(input), { host: process.argv[2] });
-        if (result?.hookSpecificOutput) process.stdout.write(`${JSON.stringify(result)}\n`);
+        // Lifecycle hooks only maintain state. Only an expired alarm delivers context.
+        handle(JSON.parse(input), { host: process.argv[2] });
       } catch {}
       clearTimeout(timer);
     });

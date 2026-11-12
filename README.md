@@ -231,7 +231,7 @@ Watchdog reads the same optional `~/.config/awareness/config.json`, or `AWARENES
 { "watchdog": { "timeoutMs": 10000 } }
 ```
 
-The default is 55 minutes (`3300000` ms), chosen to leave a five-minute buffer before the intended one-hour cache expiry while avoiding frequent five-minute checks. `watchdog.message` overrides the self-check body; either setting can be supplied independently. A fixed automatic/non-approval envelope is always included. See the [complete defaults](docs/watchdog.config.example.json), [implementation and limits](docs/watchdog.md), and [manual test](docs/watchdog-manual-check.md). Ordinary task completion may receive one self-check; the agent decides whether already-authorized work remains. Watchdog's own reply does not trigger another reminder.
+The default is 55 minutes (`3300000` ms), chosen to leave a five-minute buffer before the intended one-hour cache expiry while avoiding frequent five-minute checks. `watchdog.message` overrides the self-check body; either setting can be supplied independently. A fixed automatic/non-approval envelope is always included. See the [complete defaults](docs/watchdog.config.example.json), [implementation and limits](docs/watchdog.md), and [manual test](docs/watchdog-manual-check.md). Watchdog injects context only when its idle timer expires; session/subagent startup and teardown emit nothing. Ordinary task completion may receive one self-check; the agent decides whether already-authorized work remains. Watchdog's own reply does not trigger another reminder.
 
 ## Report an issue
 
@@ -242,7 +242,7 @@ The default is 55 minutes (`3300000` ms), chosen to leave a five-minute buffer b
 - Checks every tool call; reports context after a **10-percentage-point change** from the previous report or **10 minutes** of activity.
 - Reports tool durations only above **5 seconds**. Adds turn time and CLI-supplied cost when available.
 - Keeps each agent's counters and reporting schedule separate, including parallel subagents.
-- Runs synchronously so context arrives before the host continues. The hook makes no network or model requests and never emits blocking decisions or forces another turn.
+- Runs asynchronously; context arrives when the host collects background output. The hook makes no network or model requests and never emits blocking decisions or forces another turn.
 
 Unavailable fields are omitted. Codex token counts are cumulative thread totals; Claude counts come from its latest recorded response. Cost is supplied by the CLI, never calculated by this plugin. Your status line is unchanged.
 
