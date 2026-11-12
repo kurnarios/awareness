@@ -17,6 +17,38 @@ function fixture(t, host = 'claude') {
   return { dir, env, now, p, run };
 }
 const context = output => output?.hookSpecificOutput.additionalContext;
+test('packaged reminders finish synchronously with informational output on both hosts', t => {
+  for (const host of ['codex', 'claude']) {
+    const { p, env } = fixture(t, host);
+    const root = path.resolve(`plugins/${host}/reminders`);
+    const { hooks } = JSON.parse(fs.readFileSync(path.join(root, 'hooks/hooks.json')));
+    assert.equal(hooks.PostCompact, undefined);
+    for (const [event, groups] of Object.entries(hooks)) {
+      for (const group of groups) for (const hook of group.hooks) {
+        assert.equal(hook.async, false, `${host} ${event} must finish before the host continues`);
+        const payload = { ...p, hook_event_name: event, tool_name: 'Bash', tool_use_id: event, duration_ms: 6100 };
+        const invoke = extra => spawnSync(hook.command, {
+          shell: true, input: JSON.stringify({ ...payload, ...extra }), encoding: 'utf8', timeout: 3000,
+          env: { ...process.env, ...env, PLUGIN_ROOT: root, CLAUDE_PLUGIN_ROOT: root },
+        });
+        const result = invoke();
+        assert.equal(result.error, undefined);
+        assert.equal(result.status, 0);
+        assert.equal(result.stderr, '');
+        const output = JSON.parse(result.stdout);
+        assert.deepEqual(Object.keys(output), ['hookSpecificOutput']);
+        assert.equal(output.hookSpecificOutput.hookEventName, event);
+        assert.match(context(output), event === 'SessionStart' ? /current_time=/ : /tool=Bash elapsed=00:00:06/);
+        if (event === 'SessionStart') {
+          const compacted = invoke({ source: 'compact' });
+          assert.equal(compacted.status, 0);
+          assert.equal(compacted.stderr, '');
+          assert.match(context(JSON.parse(compacted.stdout)), /compacted=.*\nRe-read/);
+        }
+      }
+    }
+  }
+});
 test('snapshots label current time once per ten minutes, including resume and clock rollback', t => {
   for (const host of ['codex', 'claude']) {
     const { run, now } = fixture(t, host);
@@ -190,11 +222,10 @@ test('cost is copied from native agent state without pricing, summing, or borrow
   assert.equal(nativeCost(p, 'claude', [{ type: 'cost-state', totalCostUSD: 0 }]), 0);
 });
 
-test('compaction notice bypasses statistics throttling and adds no control decisions', t => {
+test('compaction notice needs only SessionStart and bypasses statistics throttling without control decisions', t => {
   for (const host of ['codex', 'claude']) {
     const { run, now } = fixture(t, host);
     run();
-    assert.equal(run({ hook_event_name: 'PostCompact', trigger: 'auto' }, 1000), undefined);
     const result = run({ hook_event_name: 'SessionStart', source: 'compact' }, 1001);
     assert.deepEqual(Object.keys(result), ['hookSpecificOutput']);
     assert.equal(result.hookSpecificOutput.hookEventName, 'SessionStart');

@@ -242,7 +242,7 @@ The default is 55 minutes (`3300000` ms), chosen to leave a five-minute buffer b
 - Checks every tool call; reports context after a **10-percentage-point change** from the previous report or **10 minutes** of activity.
 - Reports tool durations only above **5 seconds**. Adds turn time and CLI-supplied cost when available.
 - Keeps each agent's counters and reporting schedule separate, including parallel subagents.
-- Runs asynchronously; context arrives when the host collects background output. The hook makes no network or model requests and never emits blocking decisions or forces another turn.
+- All reminders hooks run synchronously: the host waits for collection, calculation, and context output before continuing. This removes the asynchronous delivery path observed adding context after a final answer and triggering a second Codex model generation; see [the session audit](docs/verification.md#remaining-interface-limits). Each invocation adds roughly 100 ms in local benchmarks. The hook makes no network or model requests and emits no blocking or permission decisions. Fresh live verification is still needed for the combined fix.
 
 Unavailable fields are omitted. Codex token counts are cumulative thread totals; Claude counts come from its latest recorded response. Cost is supplied by the CLI, never calculated by this plugin. Your status line is unchanged.
 

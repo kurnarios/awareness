@@ -93,6 +93,10 @@ test('watchdog startup and teardown emit no context on either host; only timed r
 });
 
 test('Codex SessionEnd exits 0 with zero output and retires main and child alarms', async t => {
+  // Codex forces SessionEnd to be synchronous and warns if async is requested.
+  const { hooks } = JSON.parse(fs.readFileSync(new URL('../plugins/codex/watchdog/hooks/hooks.json', import.meta.url)));
+  assert.equal(hooks.SessionEnd[0].hooks[0].async, false);
+  for (const groups of Object.values(hooks)) assert.equal(groups[0].hooks[0].async, false);
   const f = fixture(t);
   f.event('SessionStart');
   const main = f.event('Stop', {}, -20000);

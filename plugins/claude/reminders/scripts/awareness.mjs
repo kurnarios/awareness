@@ -256,17 +256,12 @@ export function handle(p, { host = 'codex', env = process.env, now = Date.now() 
   if (!p || typeof p.session_id !== 'string' || !p.session_id || typeof p.hook_event_name !== 'string') return;
   const event = p.hook_event_name;
   const config = loadConfig(env);
-  if (!['SessionStart', 'PostToolUse', 'PostToolUseFailure', 'PostCompact'].includes(event)) return;
+  if (!['SessionStart', 'PostToolUse', 'PostToolUseFailure'].includes(event)) return;
   const transcript = transcriptFor(p, host);
   const identity = host === 'claude' ? p.agent_id || 'main' : p.agent_id || transcript || 'main';
   const root = env.AWARENESS_STATE_DIR || path.join(os.homedir(), '.cache', 'awareness');
   const dir = path.join(root, hash(`${host}\0${p.session_id}\0${identity}`));
   fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
-  if (event === 'PostCompact') {
-    // PostCompact is observational. Supported context delivery is SessionStart(compact).
-    writeJSON(path.join(dir, 'compaction.json'), { at: now });
-    return;
-  }
   if (event === 'SessionStart' && p.source === 'compact') {
     return { hookSpecificOutput: { hookEventName: event, additionalContext:
       `${config.infoPrefix}: compacted=${formatTimestamp(now)}\n${config.messages.postCompaction}` } };

@@ -206,7 +206,6 @@ test('all configurable guidance messages and prefix reach emitted context', t =>
   const jumps = context(f.run());
   assert.match(jumps, /critical: context_jump=20pp: custom context jump/);
   assert.match(jumps, /critical: input_jump=500K: custom input jump/);
-  assert.equal(f.run(0, { hook_event_name: 'PostCompact' }), undefined);
   assert.equal(context(f.run(0, { hook_event_name: 'SessionStart', source: 'compact' })), `Custom info: compacted=${formatTimestamp(1000000)}\ncustom reload`);
 });
 

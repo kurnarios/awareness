@@ -36,12 +36,10 @@ try {
   const reply = await send('Run true once in Bash, then run true in a separate Bash call. Quote the compacted timestamp and re-read reminder from awareness hook context, if received. Do nothing else.');
   evidence.modelReply = reply.result;
   const log = fs.readFileSync(debug, 'utf8');
-  evidence.postCompactExecuted = /PostCompact/.test(log);
   evidence.contexts = [...new Set(log.split('\n').flatMap(line => {
     const match = line.match(/Creating attachment for .*?: (\{.*\})$/);
     try { const text = match && JSON.parse(match[1]).hookSpecificOutput?.additionalContext; return text?.includes('compacted=') ? [text] : []; } catch { return []; }
   }))];
-  assert.ok(evidence.postCompactExecuted, 'PostCompact hook was not executed');
   assert.ok(evidence.contexts.length, 'No compaction context delivered');
   assert.match(reply.result, /compacted=/);
 } finally {
